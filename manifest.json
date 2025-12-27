@@ -1,0 +1,20 @@
+{
+  "name": "工体·燃冬冰雪嘉年华",
+  "short_name": "燃冬嘉年华",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://picsum.photos/id/237/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/id/237/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
