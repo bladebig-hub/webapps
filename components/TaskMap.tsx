@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { Merchant } from '../types';
+import { Merchant } from '../types.ts';
 
 interface TaskMapProps {
   completedMerchants: Merchant[];

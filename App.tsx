@@ -11,10 +11,10 @@ import {
   X,
   Ticket
 } from 'lucide-react';
-import { AppView, Merchant, Reward, UserState } from './types';
-import { generateCheckInMessage, generateLuckyFortune } from './services/geminiService';
-import { Button } from './components/Button';
-import { TaskMap } from './components/TaskMap';
+import { AppView, Merchant, Reward, UserState } from './types.ts';
+import { generateCheckInMessage, generateLuckyFortune } from './services/geminiService.ts';
+import { Button } from './components/Button.tsx';
+import { TaskMap } from './components/TaskMap.tsx';
 
 // Mock Data - Gongti / Sanlitun Area
 const MOCK_MERCHANTS: Merchant[] = [
