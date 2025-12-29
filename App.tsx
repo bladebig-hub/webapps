@@ -9,10 +9,11 @@ import {
   CheckCircle2, 
   ArrowLeft,
   X,
-  Ticket
+  Ticket,
+  Navigation
 } from 'lucide-react';
 import { AppView, Merchant, Reward, UserState } from './types.ts';
-import { generateCheckInMessage, generateLuckyFortune } from './services/geminiService.ts';
+import { generateCheckInMessage, generateLuckyFortune, generateNextStopRecommendation } from './services/geminiService.ts';
 import { Button } from './components/Button.tsx';
 import { TaskMap } from './components/TaskMap.tsx';
 
@@ -30,6 +31,7 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [geminiMessage, setGeminiMessage] = useState<string>('');
   const [geminiFortune, setGeminiFortune] = useState<string>('');
+  const [nextStopGuide, setNextStopGuide] = useState<string>('');
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
 
   const [userState, setUserState] = useState<UserState>({
@@ -78,9 +80,17 @@ export default function App() {
         points: prev.points + 50
       }));
 
-      // Call Gemini for dynamic content
-      const msg = await generateCheckInMessage(nextMerchant.name, newCount);
+      // Call Gemini for dynamic content (Parallel requests)
+      const [msg, guide] = await Promise.all([
+        generateCheckInMessage(nextMerchant.name, newCount),
+        // Suggest the *next* next place if available, otherwise generic
+        upcomingMerchants.length > 1 
+          ? generateNextStopRecommendation(newCount, upcomingMerchants[1].name)
+          : Promise.resolve("最后冲刺！所有大奖就在眼前！")
+      ]);
+      
       setGeminiMessage(msg);
+      setNextStopGuide(guide);
 
       setCurrentView(AppView.CHECK_IN_SUCCESS);
     }, 1500);
@@ -207,18 +217,21 @@ export default function App() {
       </button>
 
       <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-6 text-center">
-        <div className="relative mb-12">
-          {/* Pulse Effect */}
-          <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20"></div>
-          <div className="relative bg-gradient-to-b from-slate-800 to-slate-950 p-8 rounded-full border border-slate-700 shadow-2xl shadow-blue-500/20">
-            <Scan size={64} className="text-blue-400" />
+        {/* Animated NFC Ripple Effect */}
+        <div className="relative mb-12 w-48 h-48 flex items-center justify-center">
+          <div className="absolute inset-0 bg-blue-500/30 rounded-full animate-ping delay-75"></div>
+          <div className="absolute inset-4 bg-blue-500/40 rounded-full animate-ping delay-150"></div>
+          <div className="absolute inset-8 bg-blue-500/50 rounded-full animate-ping delay-300"></div>
+          
+          <div className="relative z-10 bg-gradient-to-b from-slate-800 to-slate-950 p-6 rounded-full border border-slate-700 shadow-[0_0_40px_rgba(59,130,246,0.5)]">
+            <Scan size={56} className="text-blue-400" />
           </div>
         </div>
         
         <h2 className="text-2xl font-bold mb-4 tracking-wider">准备打卡</h2>
         <p className="text-slate-400 mb-12 max-w-xs mx-auto leading-relaxed">
           请将手机背部靠近商家柜台上的<br/>
-          <span className="text-blue-300 font-semibold">燃冬嘉年华 NFC 标签</span>
+          <span className="text-blue-300 font-semibold text-lg">"燃冬嘉年华"</span> 标签
         </p>
 
         {/* Simulation Button for Web Demo */}
@@ -228,7 +241,7 @@ export default function App() {
           disabled={!isScanning}
           className="animate-bounce bg-gradient-to-r from-blue-500 to-cyan-500 shadow-blue-500/50 border-0"
         >
-          {isScanning ? "模拟 NFC 碰一碰" : "正在识别..."}
+          {isScanning ? "模拟手机触碰标签" : "正在识别..."}
         </Button>
       </div>
     </div>
@@ -244,21 +257,34 @@ export default function App() {
         </div>
         
         <h2 className="text-3xl font-bold text-gray-800 mb-2">打卡成功！</h2>
-        <p className="text-gray-500 mb-8 flex items-center gap-1">
+        <p className="text-gray-500 mb-6 flex items-center gap-1">
           <MapIcon size={16} /> {userState.lastCheckInMerchant?.name}
         </p>
 
         {/* Gemini Generated Message */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-blue-100 max-w-sm w-full mb-8 transform transition-all duration-500 hover:scale-105">
-          <Sparkles className="text-amber-400 w-6 h-6 mb-2 mx-auto" />
-          <p className="text-lg font-medium text-gray-800 italic font-serif">
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-blue-100 max-w-sm w-full mb-6 transform transition-all duration-500 hover:scale-105 relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 text-yellow-100 opacity-50 rotate-12">
+            <Sparkles size={80} />
+          </div>
+          <p className="text-lg font-medium text-gray-800 italic font-serif relative z-10">
             "{geminiMessage || '正在生成好运寄语...'}"
           </p>
         </div>
 
+        {/* Gemini Next Step Recommendation */}
+        {nextStopGuide && (
+           <div className="flex items-start gap-2 max-w-sm w-full mb-8 text-left bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+              <Navigation size={18} className="text-indigo-500 mt-1 flex-shrink-0" />
+              <div>
+                <span className="text-xs font-bold text-indigo-500 uppercase tracking-wide">AI 导游建议</span>
+                <p className="text-sm text-indigo-900 leading-tight mt-1">{nextStopGuide}</p>
+              </div>
+           </div>
+        )}
+
         <div className="w-full max-w-sm bg-gray-100 rounded-2xl p-4 mb-8">
             <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold text-gray-600">今日任务</span>
+                <span className="text-sm font-bold text-gray-600">任务进度</span>
                 <span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-500">{userState.checkInCount}/{userState.totalTarget}</span>
             </div>
             <div className="w-full bg-gray-300 rounded-full h-2">
@@ -267,7 +293,7 @@ export default function App() {
         </div>
 
         <Button onClick={handleGoToRewardSelection} size="lg" fullWidth className="shadow-xl shadow-blue-200 bg-gradient-to-r from-blue-600 to-indigo-600">
-          <Gift className="mr-2" size={20} /> 抽取商家福利
+          <Gift className="mr-2" size={20} /> 开启商户盲盒
         </Button>
       </div>
     </div>
@@ -275,32 +301,34 @@ export default function App() {
 
   const renderRewardSelection = () => (
     <div className="h-screen flex flex-col bg-gradient-to-br from-indigo-900 to-slate-900 text-white px-6 py-12">
-      <h2 className="text-2xl font-bold text-center mb-2">选择你的奖励</h2>
-      <p className="text-center text-indigo-200 mb-10">完成任务，二选一福利！</p>
+      <h2 className="text-2xl font-bold text-center mb-2">选择你的礼物</h2>
+      <p className="text-center text-indigo-200 mb-10">点击任意礼盒，解锁即时福利！</p>
 
       <div className="flex-1 grid grid-cols-1 gap-6 place-content-center">
-        {/* Card 1 */}
+        {/* Gift Box 1 */}
         <div 
             onClick={() => handleSelectReward('RED_PACKET')}
-            className="group relative h-48 bg-gradient-to-br from-rose-500 to-orange-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-orange-500/50 flex flex-col items-center justify-center border-4 border-white/10"
+            className="group relative h-52 bg-gradient-to-br from-rose-500 to-orange-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-orange-500/50 flex flex-col items-center justify-center border-4 border-white/10 active:scale-95"
         >
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm">
-                <Ticket size={32} className="text-white" />
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/giftly.png')] opacity-10 rounded-2xl"></div>
+            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm shadow-inner">
+                <Gift size={40} className="text-white drop-shadow-md" />
             </div>
-            <h3 className="text-xl font-bold">超值团购券</h3>
-            <p className="text-sm text-rose-100 opacity-80 mt-1">热门套餐 限时特价</p>
+            <h3 className="text-2xl font-bold tracking-wider">惊喜盲盒 A</h3>
+            <div className="mt-2 text-xs font-medium bg-white/20 px-3 py-1 rounded-full">点击开启</div>
         </div>
 
-        {/* Card 2 */}
+        {/* Gift Box 2 */}
         <div 
             onClick={() => handleSelectReward('COUPON')}
-            className="group relative h-48 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-cyan-500/50 flex flex-col items-center justify-center border-4 border-white/10"
+            className="group relative h-52 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-purple-500/50 flex flex-col items-center justify-center border-4 border-white/10 active:scale-95"
         >
-             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm">
-                <ShoppingBag size={32} className="text-white" />
+             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/giftly.png')] opacity-10 rounded-2xl"></div>
+             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm shadow-inner">
+                <Sparkles size={40} className="text-white drop-shadow-md" />
             </div>
-            <h3 className="text-xl font-bold">商家满减券</h3>
-            <p className="text-sm text-blue-100 opacity-80 mt-1">消费立减 专属优惠</p>
+            <h3 className="text-2xl font-bold tracking-wider">惊喜盲盒 B</h3>
+            <div className="mt-2 text-xs font-medium bg-white/20 px-3 py-1 rounded-full">点击开启</div>
         </div>
       </div>
     </div>
@@ -312,23 +340,23 @@ export default function App() {
             <div className="relative mb-8 animate-bounce">
                <div className="absolute -inset-10 bg-gradient-to-r from-yellow-300 to-orange-300 rounded-full opacity-30 blur-xl"></div>
                {selectedReward?.type === 'RED_PACKET' ? (
-                   <div className="w-40 h-28 bg-rose-500 rounded-xl border-4 border-yellow-300 flex flex-col items-center justify-center shadow-2xl relative z-10 text-white">
-                       <span className="text-3xl font-bold">{selectedReward.value}</span>
-                       <span className="text-xs opacity-90 mt-1">团购特惠</span>
+                   <div className="w-48 h-32 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl border-4 border-yellow-400 flex flex-col items-center justify-center shadow-2xl relative z-10 text-white">
+                       <span className="text-4xl font-black drop-shadow-sm">{selectedReward.value}</span>
+                       <span className="text-xs font-medium bg-black/10 px-2 py-0.5 rounded mt-2">团购特惠</span>
                    </div>
                ) : (
-                    <div className="w-40 h-28 bg-blue-600 rounded-xl border-dashed border-2 border-white flex flex-col items-center justify-center shadow-2xl relative z-10 text-white">
-                       <span className="text-3xl font-bold">{selectedReward?.value}</span>
-                       <span className="text-xs opacity-90 mt-1">商家满减</span>
+                    <div className="w-48 h-32 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl border-dashed border-2 border-white/50 flex flex-col items-center justify-center shadow-2xl relative z-10 text-white">
+                       <span className="text-4xl font-black drop-shadow-sm">{selectedReward?.value}</span>
+                       <span className="text-xs font-medium bg-black/10 px-2 py-0.5 rounded mt-2">商家满减</span>
                    </div>
                )}
             </div>
 
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{selectedReward?.title}</h2>
-            <p className="text-gray-500 mb-6">{selectedReward?.description}</p>
+            <p className="text-gray-500 mb-6 max-w-xs mx-auto">{selectedReward?.description}</p>
             
-            <div className="bg-orange-50 text-orange-700 px-4 py-3 rounded-xl text-sm italic mb-10 max-w-xs mx-auto border border-orange-100">
-               "{geminiFortune}"
+            <div className="bg-orange-50 text-orange-800 px-6 py-4 rounded-xl text-base italic font-medium mb-10 max-w-xs mx-auto border border-orange-200 shadow-sm">
+               " {geminiFortune} "
             </div>
 
             <div className="w-full space-y-3">
