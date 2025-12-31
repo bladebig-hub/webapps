@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Scan, 
   Map as MapIcon, 
@@ -37,21 +37,21 @@ const GRAND_PRIZES: GrandPrize[] = [
   { 
     id: 'p1', 
     name: '工体嘉年华·超级通票', 
-    imageUrl: 'https://picsum.photos/seed/ski_resort_v2/600/400', 
+    imageUrl: 'https://picsum.photos/seed/theme_park_ticket_snow/600/400', 
     totalFragments: 3,
     description: '畅玩冰雪乐园，含滑雪体验与装备租赁。' 
   },
   { 
     id: 'p2', 
     name: '500元 商圈购物卡', 
-    imageUrl: 'https://picsum.photos/seed/shopping_luxury_mall/600/400', 
+    imageUrl: 'https://picsum.photos/seed/gift_card_luxury/600/400', 
     totalFragments: 5,
     description: '三里屯太古里/工体商圈通用购物金。' 
   },
   { 
     id: 'p3', 
     name: '泡泡玛特·限定手办', 
-    imageUrl: 'https://picsum.photos/seed/popmart_toy_cute/600/400', 
+    imageUrl: 'https://picsum.photos/seed/toy_figure_robot_art/600/400', 
     totalFragments: 4,
     description: '燃冬系列隐藏款，收藏价值极高。' 
   }
@@ -106,6 +106,10 @@ export default function App() {
     wishingCards: 2 // Initial wishing cards
   });
 
+  // Animation State for Progress Bar
+  const [progressAnimating, setProgressAnimating] = useState(false);
+  const prevFragmentsRef = useRef(1);
+
   // --- Effects ---
   
   // Banner Autoplay
@@ -117,6 +121,22 @@ export default function App() {
       return () => clearInterval(interval);
     }
   }, [currentView]);
+
+  // Trigger Progress Animation when fragments increase
+  useEffect(() => {
+    if (userState.collectedFragments > prevFragmentsRef.current) {
+      // If we are currently on HOME, animate immediately. 
+      // If we are not on HOME, we might want to animate when we return.
+      // For simplicity, we trigger it, and the 'key' or conditional class in renderHome will pick it up if visible.
+      // But to ensure the user sees it when they RETURN to home, we can control a flag that resets.
+      if (currentView === AppView.HOME) {
+         setProgressAnimating(true);
+         const timer = setTimeout(() => setProgressAnimating(false), 2000);
+         return () => clearTimeout(timer);
+      }
+    }
+    prevFragmentsRef.current = userState.collectedFragments;
+  }, [userState.collectedFragments, currentView]);
 
   // Derived State
   const currentPrize = useMemo(() => 
@@ -190,6 +210,8 @@ export default function App() {
       wishingCards: prev.wishingCards + 2 // Grant 2 Wishing Cards
     }));
 
+    // Trigger animation next time we see Home
+    setProgressAnimating(true);
     setCurrentView(AppView.CHECK_IN_SUCCESS);
   };
 
@@ -377,7 +399,7 @@ export default function App() {
               <h3 className="font-bold text-lg text-gray-900 leading-tight mb-1">{currentPrize.name}</h3>
               <p className="text-xs text-gray-500 mb-3 line-clamp-2">{currentPrize.description}</p>
               
-              {/* Fragment Progress */}
+              {/* Fragment Progress with Animation */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-rose-500">收集进度</span>
@@ -385,7 +407,11 @@ export default function App() {
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                    <div 
-                      className="bg-gradient-to-r from-rose-400 to-red-500 h-full rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(244,63,94,0.5)]"
+                      className={`h-full rounded-full transition-all duration-1000 ${
+                          progressAnimating 
+                            ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.8)] brightness-125 scale-y-125' 
+                            : 'bg-gradient-to-r from-rose-400 to-red-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
+                      }`}
                       style={{ width: `${Math.min(100, (userState.collectedFragments / currentPrize.totalFragments) * 100)}%` }}
                    ></div>
                 </div>
@@ -548,7 +574,7 @@ export default function App() {
     const lastVisited = userState.history[userState.history.length - 1] || MOCK_MERCHANTS[0];
 
     return (
-      <div className="h-screen flex flex-col bg-slate-900 relative overflow-hidden">
+      <div className="h-screen flex flex-col bg-slate-900 relative overflow-hidden text-white">
         {/* Festive Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900"></div>
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/confetti-doodles.png')] opacity-10"></div>
@@ -557,78 +583,78 @@ export default function App() {
         <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-rose-500/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 w-full max-w-md mx-auto">
+        {/* Content Container - Use flex-1 with justify-between to space out evenly */}
+        <div className="flex-1 flex flex-col px-6 py-6 relative z-10 w-full max-w-md mx-auto justify-between">
           
-          {/* Brand Exposure Card */}
-          <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 mb-6 text-center shadow-2xl animate-fade-in-up">
-            
-            {/* Merchant Image */}
-            <div className="w-full h-32 rounded-xl overflow-hidden mb-4 shadow-inner relative">
+          {/* 1. Header Area: Brand Exposure */}
+          <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-4 text-center shadow-xl mt-4">
+            {/* Merchant Image - Compact Height */}
+            <div className="w-full h-24 rounded-xl overflow-hidden mb-3 shadow-inner relative mx-auto">
                 <img src={lastVisited.imageUrl} alt={lastVisited.name} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/20"></div>
+                <div className="absolute inset-0 bg-black/10"></div>
             </div>
 
-            {/* Logo Overlay */}
-            <div className="w-20 h-20 rounded-full overflow-hidden mx-auto border-4 border-white shadow-lg -mt-14 mb-3 relative z-10 bg-white">
+            {/* Logo Overlay - Smaller */}
+            <div className="w-14 h-14 rounded-full overflow-hidden mx-auto border-2 border-white shadow-lg -mt-10 mb-1 relative z-10 bg-white">
               <img src={`https://picsum.photos/seed/logo_${lastVisited.id}/100/100`} alt="Logo" className="w-full h-full object-cover" />
             </div>
             
-            <h2 className="text-white text-xl font-bold mb-1">打卡成功</h2>
-            <div className="flex items-center justify-center gap-1 text-blue-200 text-sm mb-4">
-              <MapPin size={14} />
+            <h2 className="text-white text-lg font-bold">打卡成功</h2>
+            <div className="flex items-center justify-center gap-1 text-blue-200 text-xs mb-2">
+              <MapPin size={12} />
               <span>{lastVisited.name}</span>
             </div>
 
-            {/* AI Message */}
-            <div className="bg-white/90 text-slate-800 p-4 rounded-xl text-sm font-medium italic relative shadow-inner">
-               <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45"></div>
+            {/* AI Message - Compact */}
+            <div className="bg-white/90 text-slate-800 p-2 rounded-lg text-xs font-medium italic relative shadow-inner">
                "{geminiMessage || '欢迎光临！祝你在嘉年华玩得开心！'}"
             </div>
           </div>
 
-          {/* Rewards Section */}
-          <div className="w-full grid grid-cols-2 gap-3 mb-6">
-             {/* Fragment Item */}
-             <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-xl p-3 flex flex-col items-center justify-center relative backdrop-blur-sm animate-pulse">
+          {/* 2. Rewards Section - Compact Grid */}
+          <div className="w-full grid grid-cols-2 gap-3">
+             {/* Fragment Item - Smaller */}
+             <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-xl p-3 flex flex-col items-center justify-center relative backdrop-blur-sm animate-pulse h-24">
                 <div className="absolute top-1 right-1">
                    <CheckCircle2 size={12} className="text-green-400" />
                 </div>
-                <Puzzle size={32} className="text-yellow-300 drop-shadow-md mb-1" />
+                <Puzzle size={28} className="text-yellow-300 drop-shadow-md mb-1" />
                 <span className="text-white text-xs font-bold">任务碎片 x1</span>
              </div>
 
-             {/* Red Packet Item (New) */}
-             <div className="bg-red-500/20 border border-red-500/40 rounded-xl p-3 flex flex-col items-center justify-center relative backdrop-blur-sm animate-pulse delay-100">
+             {/* Red Packet Item - Smaller */}
+             <div className="bg-red-500/20 border border-red-500/40 rounded-xl p-3 flex flex-col items-center justify-center relative backdrop-blur-sm animate-pulse delay-100 h-24">
                 <div className="absolute top-1 right-1">
                    <Sparkles size={12} className="text-yellow-400 animate-spin-slow" />
                 </div>
-                <div className="relative">
-                   <div className="w-8 h-10 bg-red-600 rounded mb-1 flex items-center justify-center border border-red-400 shadow-md">
-                      <span className="text-yellow-300 font-bold text-xs">¥</span>
-                   </div>
+                <div className="w-8 h-10 bg-red-600 rounded mb-1 flex items-center justify-center border border-red-400 shadow-md scale-90">
+                   <span className="text-yellow-300 font-bold text-xs">¥</span>
                 </div>
                 <span className="text-white text-xs font-bold">店铺红包 x1</span>
              </div>
           </div>
 
-          {/* Wishing Cards Bonus */}
-          <div className="mb-8 w-full">
-             <div className="bg-gradient-to-r from-purple-600/60 to-indigo-600/60 border border-purple-400/30 rounded-xl p-3 flex items-center justify-center gap-3 shadow-lg">
-                <Crown size={20} className="text-yellow-300" />
+          {/* 3. Wishing Cards Bonus */}
+          <div className="w-full">
+             <div className="bg-gradient-to-r from-purple-600/60 to-indigo-600/60 border border-purple-400/30 rounded-xl p-2.5 flex items-center justify-center gap-3 shadow-lg">
+                <Crown size={18} className="text-yellow-300" />
                 <span className="text-white font-bold text-sm">额外获赠：许愿卡 x2</span>
                 <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full">已存入</span>
              </div>
           </div>
 
-          <Button 
-            onClick={() => setCurrentView(AppView.REWARD_SELECTION)} 
-            size="lg" 
-            fullWidth 
-            className="shadow-[0_0_20px_rgba(37,99,235,0.5)] bg-gradient-to-r from-blue-500 to-indigo-600 border-t border-blue-400"
-          >
-            <Gift className="mr-2 animate-bounce" size={20} /> 
-            开启商户盲盒礼包
-          </Button>
+          {/* 4. Action Button - Pinned Bottom */}
+          <div className="w-full mb-2">
+            <Button 
+              onClick={() => setCurrentView(AppView.REWARD_SELECTION)} 
+              size="lg" 
+              fullWidth 
+              className="shadow-[0_0_20px_rgba(37,99,235,0.5)] bg-gradient-to-r from-blue-500 to-indigo-600 border-t border-blue-400 py-3"
+            >
+              <Gift className="mr-2 animate-bounce" size={20} /> 
+              开启商户盲盒礼包
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -674,7 +700,7 @@ export default function App() {
     if (!selectedReward) return null;
 
     return (
-        <div className="h-screen flex flex-col relative overflow-hidden">
+        <div className="h-screen flex flex-col relative overflow-hidden text-white bg-slate-900">
             {/* Ceremonial Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900"></div>
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 animate-pulse"></div>
@@ -682,73 +708,75 @@ export default function App() {
             {/* Light Rays Effect */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-rose-500/20 to-transparent blur-3xl"></div>
 
-            <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full px-4 relative z-10">
+            {/* Content Container - Flex Justify Between for One Screen Fit */}
+            <div className="flex-1 flex flex-col items-center justify-between max-w-sm mx-auto w-full px-4 py-6 relative z-10">
                 
-                <div className="mb-6 text-center animate-fade-in-down">
-                  <div className="inline-block p-3 bg-yellow-400/20 rounded-full backdrop-blur-sm mb-2 border border-yellow-400/50">
-                    <Gift size={32} className="text-yellow-300" />
+                <div className="text-center animate-fade-in-down mt-4">
+                  <div className="inline-block p-2 bg-yellow-400/20 rounded-full backdrop-blur-sm mb-1 border border-yellow-400/50">
+                    <Gift size={24} className="text-yellow-300" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white tracking-wide">恭喜获得商家好礼</h2>
-                  <p className="text-purple-200 text-sm">已自动存入卡包</p>
+                  <h2 className="text-xl font-bold text-white tracking-wide">恭喜获得商家好礼</h2>
+                  <p className="text-purple-200 text-xs">已自动存入卡包</p>
                 </div>
 
-                {/* Ritualistic Ticket Design */}
-                <div className="w-full bg-white rounded-2xl overflow-hidden shadow-2xl relative mb-8 transform hover:scale-105 transition-transform duration-500">
-                    {/* Product Image Area */}
-                    <div className="h-40 w-full relative">
+                {/* Ritualistic Ticket Design - Compressed height */}
+                <div className="w-full bg-white rounded-2xl overflow-hidden shadow-2xl relative transform hover:scale-105 transition-transform duration-500 text-gray-800">
+                    {/* Product Image Area - Reduced Height */}
+                    <div className="h-32 w-full relative">
                        <img src={selectedReward.imageUrl} className="w-full h-full object-cover" alt="Product" />
-                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                       <div className="absolute bottom-3 left-4 text-white">
-                          <div className="text-xs font-bold opacity-80 uppercase tracking-widest">Rewards</div>
-                          <div className="text-lg font-bold">{selectedReward.title}</div>
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                       <div className="absolute bottom-2 left-4 text-white">
+                          <div className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Rewards</div>
+                          <div className="text-base font-bold line-clamp-1">{selectedReward.title}</div>
                        </div>
                     </div>
                     
                     {/* Ticket Body */}
-                    <div className="p-6">
+                    <div className="p-4">
                         {/* Value & Content */}
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex justify-between items-center mb-4">
                            <div>
-                              <div className="text-sm text-gray-500 mb-1">优惠价值</div>
-                              <div className="text-4xl font-black text-rose-600 tracking-tighter">{selectedReward.value}</div>
+                              <div className="text-xs text-gray-400 mb-0.5">优惠价值</div>
+                              <div className="text-3xl font-black text-rose-600 tracking-tighter">{selectedReward.value}</div>
                            </div>
                            <div className="text-right">
-                              <div className="bg-rose-50 text-rose-600 px-3 py-1 rounded-lg text-xs font-bold mb-1 inline-block border border-rose-100">
+                              <div className="bg-rose-50 text-rose-600 px-2 py-0.5 rounded text-[10px] font-bold mb-1 inline-block border border-rose-100">
                                 仅限今日
                               </div>
-                              <div className="text-xs text-gray-400">满额可用</div>
+                              <div className="text-[10px] text-gray-400">满额可用</div>
                            </div>
                         </div>
 
                         {/* Dashed Line */}
-                        <div className="border-t-2 border-dashed border-gray-100 my-4 relative">
-                           <div className="absolute -left-8 -top-3 w-6 h-6 bg-gray-900 rounded-full"></div>
-                           <div className="absolute -right-8 -top-3 w-6 h-6 bg-gray-900 rounded-full"></div>
+                        <div className="border-t-2 border-dashed border-gray-100 my-3 relative">
+                           <div className="absolute -left-6 -top-2 w-4 h-4 bg-gray-900 rounded-full"></div>
+                           <div className="absolute -right-6 -top-2 w-4 h-4 bg-gray-900 rounded-full"></div>
                         </div>
 
                         {/* Barcode / QR Simulation */}
                         <div className="flex items-center justify-between gap-4">
                            <div className="flex-1">
-                              <div className="text-[10px] text-gray-400 mb-1 uppercase">Code</div>
-                              <div className="font-mono font-bold text-gray-800 text-lg tracking-widest">
+                              <div className="text-[10px] text-gray-400 uppercase">Code</div>
+                              <div className="font-mono font-bold text-gray-800 text-base tracking-widest">
                                  RW-{(Math.random()*10000).toFixed(0)}
                               </div>
                            </div>
-                           <QrCode size={40} className="text-gray-800" />
+                           <QrCode size={32} className="text-gray-800" />
                         </div>
                     </div>
                 </div>
 
                 {/* Fortune Cookie */}
-                <div className="bg-white/10 backdrop-blur text-purple-100 px-6 py-4 rounded-xl text-sm italic font-medium mb-8 border border-white/10 shadow-lg max-w-xs text-center relative">
-                   <Sparkles size={16} className="absolute -top-2 -left-2 text-yellow-300 animate-spin-slow" />
+                <div className="bg-white/10 backdrop-blur text-purple-100 px-4 py-2 rounded-xl text-xs italic font-medium border border-white/10 shadow-lg max-w-xs text-center relative">
+                   <Sparkles size={12} className="absolute -top-1.5 -left-1.5 text-yellow-300 animate-spin-slow" />
                    " {geminiFortune} "
-                   <Sparkles size={16} className="absolute -bottom-2 -right-2 text-yellow-300 animate-spin-slow" />
                 </div>
 
-                <Button onClick={handleClaimSuccess} fullWidth className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-[0_0_20px_rgba(234,179,8,0.4)] border-none text-lg py-4">
-                    立即使用 / 存入卡包
-                </Button>
+                <div className="w-full mb-2">
+                    <Button onClick={handleClaimSuccess} fullWidth className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-[0_0_20px_rgba(234,179,8,0.4)] border-none text-base py-3">
+                        立即使用 / 存入卡包
+                    </Button>
+                </div>
             </div>
         </div>
     );
