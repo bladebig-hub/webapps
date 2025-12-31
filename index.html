@@ -24,6 +24,17 @@
         -ms-overflow-style: none;  /* IE and Edge */
         scrollbar-width: none;  /* Firefox */
       }
+      
+      /* Custom Animations */
+      @keyframes pulse-ring {
+        0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); }
+        100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+      }
+      @keyframes pop-in {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
     </style>
     <!-- Shim for process.env is kept as a fallback for runtime safety -->
     <script>
@@ -45,7 +56,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-50 text-gray-900 select-none overscroll-none">
+  <body class="bg-gray-50 text-gray-900 select-none">
     <div id="root"></div>
     <!-- Vite will transform this path during build and inject the correct hashed JS file -->
     <script type="module" src="./index.tsx"></script>

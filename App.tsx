@@ -24,7 +24,9 @@ import {
   Clock,
   Share2,
   Crown,
-  CreditCard
+  CreditCard,
+  User,
+  XCircle
 } from 'lucide-react';
 import { AppView, Merchant, Reward, UserState, GrandPrize, WalletItem } from './types.ts';
 import { generateCheckInMessage, generateLuckyFortune, generateNextStopRecommendation } from './services/geminiService.ts';
@@ -95,6 +97,9 @@ export default function App() {
   const [nextStopGuide, setNextStopGuide] = useState<string>('');
   const [selectedReward, setSelectedReward] = useState<WalletItem | null>(null);
 
+  // Red Packet Modal Logic
+  const [showRedPacket, setShowRedPacket] = useState(false);
+
   // User State
   const [userState, setUserState] = useState<UserState>({
     currentPrizeId: 'p1', // Default prize
@@ -125,18 +130,20 @@ export default function App() {
   // Trigger Progress Animation when fragments increase
   useEffect(() => {
     if (userState.collectedFragments > prevFragmentsRef.current) {
-      // If we are currently on HOME, animate immediately. 
-      // If we are not on HOME, we might want to animate when we return.
-      // For simplicity, we trigger it, and the 'key' or conditional class in renderHome will pick it up if visible.
-      // But to ensure the user sees it when they RETURN to home, we can control a flag that resets.
-      if (currentView === AppView.HOME) {
-         setProgressAnimating(true);
-         const timer = setTimeout(() => setProgressAnimating(false), 2000);
-         return () => clearTimeout(timer);
-      }
+       // Only animate if on home, or store for later? 
+       // We trigger animation whenever we return to HOME in renderHome
     }
     prevFragmentsRef.current = userState.collectedFragments;
-  }, [userState.collectedFragments, currentView]);
+  }, [userState.collectedFragments]);
+
+  // When view changes to HOME, check if we need to animate (e.g. fragments increased recently)
+  useEffect(() => {
+    if (currentView === AppView.HOME) {
+       setProgressAnimating(true);
+       const timer = setTimeout(() => setProgressAnimating(false), 2500); // Longer animation time
+       return () => clearTimeout(timer);
+    }
+  }, [currentView]);
 
   // Derived State
   const currentPrize = useMemo(() => 
@@ -164,7 +171,6 @@ export default function App() {
   };
 
   const handleShare = () => {
-    // Simulate share
     alert("已调起微信分享，快去邀请好友吧！");
   };
 
@@ -178,83 +184,76 @@ export default function App() {
     const nextMerchant = upcomingMerchants[0];
     const newFragmentCount = userState.collectedFragments + 1;
 
-    // Parallel execution for speed (Targeting ~2 seconds total perception)
-    const minDelayPromise = new Promise(resolve => setTimeout(resolve, 2000));
+    // NO DELAY - INSTANT TRANSITION
     
-    const geminiPromise = (async () => {
-       try {
-         const [msg, guide] = await Promise.all([
-            generateCheckInMessage(nextMerchant.name, newFragmentCount),
-            upcomingMerchants.length > 1 
-              ? generateNextStopRecommendation(newFragmentCount, upcomingMerchants[1].name)
-              : Promise.resolve("最后冲刺！集齐碎片召唤大奖！")
-         ]);
-         return { msg, guide };
-       } catch (e) {
-         return { msg: "打卡成功！", guide: "" };
-       }
-    })();
-
-    // Wait for both
-    const [_, geminiResult] = await Promise.all([minDelayPromise, geminiPromise]);
+    // Async call to Gemini (fire and forget for UI speed, or let it load in background)
+    generateCheckInMessage(nextMerchant.name, newFragmentCount).then(msg => setGeminiMessage(msg));
     
     setIsScanning(false);
-    setGeminiMessage(geminiResult.msg);
-    setNextStopGuide(geminiResult.guide);
-
+    
     // Update User State
     setUserState(prev => ({
       ...prev,
       history: [...prev.history, nextMerchant],
       collectedFragments: newFragmentCount,
-      wishingCards: prev.wishingCards + 2 // Grant 2 Wishing Cards
+      wishingCards: prev.wishingCards + 2 
     }));
 
-    // Trigger animation next time we see Home
-    setProgressAnimating(true);
+    // Trigger Red Packet Popup
+    setShowRedPacket(true);
+
     setCurrentView(AppView.CHECK_IN_SUCCESS);
   };
 
+  const handleClaimRedPacket = () => {
+     setShowRedPacket(false);
+     const redPacket: WalletItem = {
+        id: `rp-${Date.now()}`,
+        type: 'RED_PACKET',
+        title: '店铺现金红包',
+        value: '¥7.58',
+        date: new Date().toLocaleDateString(),
+        description: '到店支付抵扣',
+     };
+     setUserState(prev => ({
+        ...prev,
+        wallet: [redPacket, ...prev.wallet]
+     }));
+     // Optional: Alert or Toast "已存入卡包"
+  };
+
   const handleSelectReward = async (type: 'RED_PACKET' | 'COUPON') => {
-    // Parallel execution for speed (Targeting ~2 seconds)
-    const minDelayPromise = new Promise(resolve => setTimeout(resolve, 2000));
+    // NO DELAY - INSTANT
     
-    const prepareRewardPromise = (async () => {
-        const fortune = await generateLuckyFortune();
-        const randomMerchant = MOCK_MERCHANTS[Math.floor(Math.random() * MOCK_MERCHANTS.length)];
-        
-        let newReward: WalletItem;
+    // Quick random generation
+    const randomMerchant = MOCK_MERCHANTS[Math.floor(Math.random() * MOCK_MERCHANTS.length)];
+    let newReward: WalletItem;
 
-        if (type === 'RED_PACKET') {
-          newReward = { 
-              id: Date.now().toString(), 
-              type: 'COUPON', 
-              title: randomMerchant.offerTitle, 
-              value: randomMerchant.price || '5折', 
-              date: new Date().toLocaleDateString(),
-              description: `适用商户：${randomMerchant.name}`,
-              imageUrl: randomMerchant.imageUrl
-          };
-        } else {
-           newReward = { 
-               id: Date.now().toString(), 
-               type: 'COUPON', 
-               title: '50元代金券', 
-               value: '¥50', 
-               date: new Date().toLocaleDateString(),
-               description: `适用商户：${randomMerchant.name} (满200可用)`,
-               imageUrl: randomMerchant.imageUrl
-            };
-        }
-        return { fortune, newReward };
-    })();
+    if (type === 'RED_PACKET') {
+      newReward = { 
+          id: Date.now().toString(), 
+          type: 'COUPON', 
+          title: randomMerchant.offerTitle, 
+          value: randomMerchant.price || '5折', 
+          date: new Date().toLocaleDateString(),
+          description: `适用商户：${randomMerchant.name}`,
+          imageUrl: randomMerchant.imageUrl
+      };
+    } else {
+       newReward = { 
+           id: Date.now().toString(), 
+           type: 'COUPON', 
+           title: '50元代金券', 
+           value: '¥50', 
+           date: new Date().toLocaleDateString(),
+           description: `适用商户：${randomMerchant.name} (满200可用)`,
+           imageUrl: randomMerchant.imageUrl
+        };
+    }
 
-    const [_, result] = await Promise.all([minDelayPromise, prepareRewardPromise]);
-    const { fortune, newReward } = result;
-
-    setGeminiFortune(fortune);
+    // Fire fortune generation in background
+    generateLuckyFortune().then(f => setGeminiFortune(f));
     
-    // Add Fragment logic
     const currentMerchant = userState.history[userState.history.length-1];
     const fragmentItem: WalletItem = {
         id: `frag-${Date.now()}`,
@@ -369,6 +368,16 @@ export default function App() {
               <span className="text-xs font-bold tracking-wide">分享</span>
             </button>
          </div>
+
+         {/* User/Poster Button (Top Left - NEW) */}
+         <div className="absolute top-4 left-4 z-20">
+            <button 
+              onClick={() => setCurrentView(AppView.POSTER)}
+              className="flex items-center justify-center w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full shadow-lg border border-white/30 backdrop-blur-md active:scale-95 transition-transform"
+            >
+              <User size={18} fill="white" />
+            </button>
+         </div>
       </div>
 
       {/* 2. Target Prize Card */}
@@ -402,18 +411,27 @@ export default function App() {
               {/* Fragment Progress with Animation */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-rose-500">收集进度</span>
-                  <span className="text-gray-600">{userState.collectedFragments} / {currentPrize.totalFragments}</span>
+                  <span className={`transition-colors duration-300 ${progressAnimating ? 'text-red-600 scale-105' : 'text-rose-500'}`}>收集进度</span>
+                  <span className={`text-gray-600 transition-all duration-300 ${progressAnimating ? 'font-bold scale-110' : ''}`}>
+                    {userState.collectedFragments} / {currentPrize.totalFragments}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                    <div 
-                      className={`h-full rounded-full transition-all duration-1000 ${
+                      className={`h-full rounded-full transition-all duration-1000 ease-out ${
                           progressAnimating 
-                            ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.8)] brightness-125 scale-y-125' 
+                            ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.8)]' 
                             : 'bg-gradient-to-r from-rose-400 to-red-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
                       }`}
-                      style={{ width: `${Math.min(100, (userState.collectedFragments / currentPrize.totalFragments) * 100)}%` }}
-                   ></div>
+                      style={{ 
+                          width: `${Math.min(100, (userState.collectedFragments / currentPrize.totalFragments) * 100)}%`,
+                          transform: progressAnimating ? 'scaleY(1.5)' : 'scaleY(1)'
+                      }}
+                   >
+                     {progressAnimating && (
+                       <div className="w-full h-full absolute inset-0 bg-white/30 animate-pulse"></div>
+                     )}
+                   </div>
                 </div>
               </div>
             </div>
@@ -575,6 +593,33 @@ export default function App() {
 
     return (
       <div className="h-screen flex flex-col bg-slate-900 relative overflow-hidden text-white">
+        
+        {/* RED PACKET MODAL POPUP */}
+        {showRedPacket && (
+           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+              <div className="bg-[#d93025] w-72 rounded-3xl p-6 relative flex flex-col items-center shadow-2xl animate-[pop-in_0.4s_ease-out_forwards] border-4 border-[#ffd700]">
+                 <div className="absolute -top-12 w-24 h-24 bg-[#d93025] rounded-full border-4 border-[#ffd700] flex items-center justify-center shadow-lg">
+                    <span className="text-4xl text-[#ffd700] font-bold">¥</span>
+                 </div>
+                 <h2 className="mt-10 text-[#ffd700] font-bold text-xl tracking-wider">恭喜获得店铺红包</h2>
+                 <p className="text-red-100 text-sm mt-1">仅限到店支付使用</p>
+                 
+                 <div className="my-6">
+                    <span className="text-5xl font-black text-white">7.58</span>
+                    <span className="text-lg font-bold text-white ml-1">元</span>
+                 </div>
+
+                 <Button 
+                   onClick={handleClaimRedPacket}
+                   fullWidth 
+                   className="bg-gradient-to-b from-[#ffed4a] to-[#ffc107] text-[#d93025] shadow-lg font-black text-lg py-3 rounded-full border-b-4 border-[#b28900] active:translate-y-1 active:border-b-0"
+                 >
+                    放入卡包
+                 </Button>
+              </div>
+           </div>
+        )}
+
         {/* Festive Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900"></div>
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/confetti-doodles.png')] opacity-10"></div>
@@ -854,6 +899,68 @@ export default function App() {
        </div>
     </div>
   );
+  
+  const renderPoster = () => (
+    <div className="h-screen bg-slate-900 text-white relative flex flex-col items-center justify-center overflow-hidden">
+        {/* Close Button */}
+        <button 
+           onClick={() => setCurrentView(AppView.HOME)}
+           className="absolute top-6 right-6 z-50 p-2 bg-black/20 rounded-full hover:bg-black/40"
+        >
+           <XCircle size={32} color="white" />
+        </button>
+
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-indigo-950"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
+
+        {/* Poster Content */}
+        <div className="w-full max-w-sm bg-white text-slate-900 rounded-3xl overflow-hidden shadow-2xl transform scale-95 relative z-10">
+            {/* Header Image */}
+            <div className="h-48 relative">
+                <img src="https://picsum.photos/seed/winter_membership/600/400" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-4 left-6 text-white">
+                    <h2 className="text-2xl font-black italic tracking-wider">燃冬·通关护照</h2>
+                    <p className="text-sm opacity-90">Winter Carnival Pass</p>
+                </div>
+            </div>
+
+            {/* User Info */}
+            <div className="px-8 py-6 text-center">
+                 <div className="w-20 h-20 rounded-full border-4 border-white shadow-lg mx-auto -mt-16 mb-4 relative z-20">
+                    <img src="https://picsum.photos/seed/user/200/200" className="w-full h-full rounded-full" />
+                 </div>
+                 
+                 <h3 className="text-xl font-bold mb-1">Explorer #9527</h3>
+                 <div className="flex justify-center gap-4 text-sm text-gray-500 mb-6">
+                    <div className="flex flex-col">
+                        <span className="font-bold text-lg text-slate-800">{userState.collectedFragments}</span>
+                        <span>碎片</span>
+                    </div>
+                     <div className="w-px bg-gray-200"></div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-lg text-slate-800">{userState.history.length}</span>
+                        <span>打卡</span>
+                    </div>
+                    <div className="w-px bg-gray-200"></div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-lg text-slate-800">{userState.wallet.length}</span>
+                        <span>卡包</span>
+                    </div>
+                 </div>
+
+                 <div className="bg-gray-50 p-6 rounded-2xl border border-dashed border-gray-300">
+                    <QrCode size={160} className="mx-auto text-slate-800" />
+                    <p className="mt-3 text-xs text-gray-400 font-mono tracking-widest">WINTER-2025-VIP</p>
+                 </div>
+            </div>
+            
+            <div className="bg-slate-100 p-4 text-center text-xs text-gray-400">
+                出示此码享受嘉年华VIP权益
+            </div>
+        </div>
+    </div>
+  );
 
   const renderMissionComplete = () => (
     <div className="h-screen flex flex-col bg-white overflow-y-auto">
@@ -1001,12 +1108,14 @@ export default function App() {
             <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-1">燃冬之旅</h2>
                 <p className="text-gray-500 text-sm">沿着地图打卡，点亮工体·三里屯！</p>
+                <p className="text-xs text-blue-500 mt-1">当前线路：{currentPrize.name} 专属路线</p>
             </div>
 
-            {/* D3 Map Component */}
+            {/* D3 Map Component with Prize ID */}
             <TaskMap 
                 completedMerchants={userState.history} 
                 upcomingMerchants={upcomingMerchants} 
+                prizeId={userState.currentPrizeId}
             />
             
             <div className="h-20"></div> 
@@ -1025,6 +1134,7 @@ export default function App() {
       {currentView === AppView.PRIZE_SELECTOR && renderPrizeSelector()}
       {currentView === AppView.WALLET && renderWallet()}
       {currentView === AppView.MISSION_COMPLETE && renderMissionComplete()}
+      {currentView === AppView.POSTER && renderPoster()}
     </div>
   );
 }

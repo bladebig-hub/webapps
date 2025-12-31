@@ -7,7 +7,8 @@ export enum AppView {
   MAP_VIEW = 'MAP_VIEW',
   PRIZE_SELECTOR = 'PRIZE_SELECTOR',
   WALLET = 'WALLET',
-  MISSION_COMPLETE = 'MISSION_COMPLETE'
+  MISSION_COMPLETE = 'MISSION_COMPLETE',
+  POSTER = 'POSTER'
 }
 
 export interface GrandPrize {

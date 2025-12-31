@@ -5,9 +5,10 @@ import { Merchant } from '../types.ts';
 interface TaskMapProps {
   completedMerchants: Merchant[];
   upcomingMerchants: Merchant[];
+  prizeId: string;
 }
 
-export const TaskMap: React.FC<TaskMapProps> = ({ completedMerchants, upcomingMerchants }) => {
+export const TaskMap: React.FC<TaskMapProps> = ({ completedMerchants, upcomingMerchants, prizeId }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -16,17 +17,32 @@ export const TaskMap: React.FC<TaskMapProps> = ({ completedMerchants, upcomingMe
 
     const width = containerRef.current.clientWidth;
     const height = 400; // Fixed height for scrolling map
-    const padding = 40;
+    const padding = 50;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove(); // Clear previous
 
     const allMerchants = [...completedMerchants, ...upcomingMerchants];
-    // Create a zig-zag path data
+    
+    // Generate points based on Prize ID to vary the route visual
     const points = allMerchants.map((m, i) => {
+      let x = width / 2;
+      
+      if (prizeId === 'p1') {
+        // Zig Zag
+        x = (i % 2 === 0) ? padding + 40 : width - padding - 40;
+      } else if (prizeId === 'p2') {
+        // Sine Wave curve
+        const angle = (i / allMerchants.length) * Math.PI * 4; // 2 cycles
+        x = (width / 2) + Math.sin(angle) * (width / 3);
+      } else {
+        // Simple Center Line with slight variance
+        x = (width / 2) + (Math.random() * 40 - 20);
+      }
+
       return {
-        x: (i % 2 === 0) ? padding + 40 : width - padding - 40,
-        y: height - (padding + (i * (height - 2 * padding) / (allMerchants.length - 1 || 1))), // Start from bottom
+        x: x,
+        y: height - (padding + (i * (height - 2 * padding) / (Math.max(1, allMerchants.length - 1)))), // Start from bottom
         data: m,
         status: i < completedMerchants.length ? 'completed' : 'upcoming'
       };
@@ -52,7 +68,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ completedMerchants, upcomingMe
       .datum(points)
       .attr("d", lineGenerator)
       .attr("fill", "none")
-      .attr("stroke", "#f43f5e") // Rose-500
+      .attr("stroke", prizeId === 'p2' ? "#8b5cf6" : (prizeId === 'p3' ? "#f59e0b" : "#f43f5e")) // Different colors for routes
       .attr("stroke-width", 4)
       .attr("stroke-linecap", "round")
       .attr("stroke-dasharray", function() { return this.getTotalLength(); })
@@ -78,12 +94,14 @@ export const TaskMap: React.FC<TaskMapProps> = ({ completedMerchants, upcomingMe
     // Node Circle Shadow
     nodes.append("circle")
       .attr("r", 24)
-      .attr("fill", d => d.status === 'completed' ? "rgba(244, 63, 94, 0.2)" : "rgba(156, 163, 175, 0.1)");
+      .attr("fill", d => d.status === 'completed' ? "rgba(255, 255, 255, 0.5)" : "rgba(156, 163, 175, 0.1)")
+      .attr("stroke", d => d.status === 'completed' ? (prizeId === 'p2' ? "#8b5cf6" : "#f43f5e") : "none")
+      .attr("stroke-opacity", 0.3);
 
     // Node Circle
     nodes.append("circle")
       .attr("r", 18)
-      .attr("fill", d => d.status === 'completed' ? "#f43f5e" : "#fff")
+      .attr("fill", d => d.status === 'completed' ? (prizeId === 'p2' ? "#8b5cf6" : (prizeId === 'p3' ? "#f59e0b" : "#f43f5e")) : "#fff")
       .attr("stroke", d => d.status === 'completed' ? "#fff" : "#9ca3af")
       .attr("stroke-width", 3);
 
@@ -104,26 +122,30 @@ export const TaskMap: React.FC<TaskMapProps> = ({ completedMerchants, upcomingMe
       .attr("font-size", "12px")
       .attr("font-weight", "600")
       .attr("fill", "#374151")
+      .style("text-shadow", "0 1px 2px rgba(255,255,255,1)")
       .text(d => d.data.name.substring(0, 15));
 
-  }, [completedMerchants, upcomingMerchants]);
+  }, [completedMerchants, upcomingMerchants, prizeId]);
 
   return (
     <div ref={containerRef} className="w-full relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <svg ref={svgRef} width="100%" height="400" className="block"></svg>
       
       {/* Avatar Marker simulating user position */}
-      <div 
-        className="absolute w-10 h-10 bg-white p-1 rounded-full shadow-lg z-10 transition-all duration-1000 ease-out"
-        style={{
-          // Simple positioning based on last completed logic for demo
-          bottom: `${40 + (completedMerchants.length - 1) * (320 / (completedMerchants.length + upcomingMerchants.length - 1))}px`,
-          left: completedMerchants.length % 2 !== 0 ? 'calc(100% - 80px)' : '80px', 
-          opacity: completedMerchants.length > 0 ? 1 : 0
-        }}
-      >
-        <img src="https://picsum.photos/seed/user/40/40" alt="You" className="w-full h-full rounded-full object-cover" />
-      </div>
+      {completedMerchants.length > 0 && (
+         <div 
+            className="absolute w-10 h-10 bg-white p-1 rounded-full shadow-lg z-10 transition-all duration-1000 ease-out flex items-center justify-center border-2 border-white"
+            style={{
+              // Approximate position logic for demo purposes (real implementation would define path geometry precisely)
+              bottom: '10%', // simplified for demo
+              left: '50%',
+              transform: 'translate(-50%, 50%)',
+              animation: 'bounce 2s infinite'
+            }}
+          >
+            <img src="https://picsum.photos/seed/user/40/40" alt="You" className="w-full h-full rounded-full object-cover" />
+          </div>
+      )}
     </div>
   );
 };
