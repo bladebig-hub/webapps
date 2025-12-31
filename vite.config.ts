@@ -23,12 +23,12 @@ export default defineConfig(({ mode }) => {
           orientation: 'portrait',
           icons: [
             {
-              src: 'https://picsum.photos/id/237/192/192',
+              src: 'https://picsum.photos/seed/snow_icon/192/192',
               sizes: '192x192',
               type: 'image/png'
             },
             {
-              src: 'https://picsum.photos/id/237/512/512',
+              src: 'https://picsum.photos/seed/snow_icon/512/512',
               sizes: '512x512',
               type: 'image/png'
             }

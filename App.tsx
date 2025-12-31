@@ -15,7 +15,8 @@ import {
   Phone,
   MapPin,
   RefreshCw,
-  ShoppingBag
+  ShoppingBag,
+  Flame
 } from 'lucide-react';
 import { AppView, Merchant, Reward, UserState, GrandPrize, WalletItem } from './types.ts';
 import { generateCheckInMessage, generateLuckyFortune, generateNextStopRecommendation } from './services/geminiService.ts';
@@ -28,32 +29,37 @@ const GRAND_PRIZES: GrandPrize[] = [
   { 
     id: 'p1', 
     name: '工体嘉年华·超级通票', 
-    imageUrl: 'https://picsum.photos/seed/ski/300/200', 
+    imageUrl: 'https://picsum.photos/seed/ski_resort_v2/600/400', 
     totalFragments: 3,
     description: '畅玩冰雪乐园，含滑雪体验与装备租赁。' 
   },
   { 
     id: 'p2', 
     name: '500元 商圈购物卡', 
-    imageUrl: 'https://picsum.photos/seed/shop/300/200', 
+    imageUrl: 'https://picsum.photos/seed/shopping_luxury_mall/600/400', 
     totalFragments: 5,
     description: '三里屯太古里/工体商圈通用购物金。' 
   },
   { 
     id: 'p3', 
     name: '泡泡玛特·限定手办', 
-    imageUrl: 'https://picsum.photos/seed/toy/300/200', 
+    imageUrl: 'https://picsum.photos/seed/popmart_toy_cute/600/400', 
     totalFragments: 4,
     description: '燃冬系列隐藏款，收藏价值极高。' 
   }
 ];
 
 const MOCK_MERCHANTS: Merchant[] = [
-  { id: '1', name: 'Shake Shack (三里屯店)', category: '餐饮', distance: '100m', imageUrl: 'https://picsum.photos/seed/shake/100/100', offerType: 'GROUP_DEAL', offerTitle: '双人经典汉堡套餐', price: '¥128', originalPrice: '¥160', description: "美式经典汉堡与奶昔。" },
-  { id: '2', name: '乐高品牌旗舰店', category: '零售', distance: '250m', imageUrl: 'https://picsum.photos/seed/lego/100/100', offerType: 'COUPON', offerTitle: '满500减50优惠券', description: "激发无限创造力。" },
-  { id: '3', name: '工体·冰雪嘉年华', category: '娱乐', distance: '500m', imageUrl: 'https://picsum.photos/seed/snow/100/100', offerType: 'VOUCHER', offerTitle: '单人入场早鸟票', price: '¥88', originalPrice: '¥120', description: "冬日必玩冰上乐园。" },
-  { id: '4', name: 'COMMUNE (工体店)', category: '酒吧', distance: '650m', imageUrl: 'https://picsum.photos/seed/bar/100/100', offerType: 'GROUP_DEAL', offerTitle: '夜宵欢聚4人餐', price: '¥398', originalPrice: '¥680', description: "美酒美食自选超市。" },
-  { id: '5', name: '陶陶居 (太古里店)', category: '餐饮', distance: '800m', imageUrl: 'https://picsum.photos/seed/dimsum/100/100', offerType: 'VOUCHER', offerTitle: '100元代金券', price: '¥92', originalPrice: '¥100', description: "正宗广式早茶。" },
+  { id: '1', name: 'Shake Shack (三里屯店)', category: '餐饮', distance: '100m', imageUrl: 'https://picsum.photos/seed/burger_shake/200/200', offerType: 'GROUP_DEAL', offerTitle: '双人经典汉堡套餐', price: '¥128', originalPrice: '¥160', description: "美式经典汉堡与奶昔，情侣约会首选。" },
+  { id: '2', name: '乐高品牌旗舰店', category: '零售', distance: '250m', imageUrl: 'https://picsum.photos/seed/lego_store/200/200', offerType: 'COUPON', offerTitle: '满500减50优惠券', description: "激发无限创造力，新品首发。" },
+  { id: '3', name: '工体·冰雪嘉年华', category: '娱乐', distance: '500m', imageUrl: 'https://picsum.photos/seed/snow_park/200/200', offerType: 'VOUCHER', offerTitle: '单人入场早鸟票', price: '¥88', originalPrice: '¥120', description: "冬日必玩冰上乐园，限时特惠。" },
+  { id: '4', name: 'COMMUNE (工体店)', category: '酒吧', distance: '650m', imageUrl: 'https://picsum.photos/seed/pub_drinks/200/200', offerType: 'GROUP_DEAL', offerTitle: '夜宵欢聚4人餐', price: '¥398', originalPrice: '¥680', description: "美酒美食自选超市，聚会神地。" },
+  { id: '5', name: '陶陶居 (太古里店)', category: '餐饮', distance: '800m', imageUrl: 'https://picsum.photos/seed/dimsum_tea/200/200', offerType: 'VOUCHER', offerTitle: '100元代金券', price: '¥92', originalPrice: '¥100', description: "正宗广式早茶，全场通用。" },
+  { id: '6', name: 'Blue Frog 蓝蛙', category: '餐饮', distance: '900m', imageUrl: 'https://picsum.photos/seed/bluefrog/200/200', offerType: 'GROUP_DEAL', offerTitle: '周一汉堡买一送一', price: '¥98', originalPrice: '¥196', description: "美式炙烤，肉食者的天堂。" },
+  { id: '7', name: 'Megacine 影城', category: '娱乐', distance: '1.2km', imageUrl: 'https://picsum.photos/seed/cinema/200/200', offerType: 'VOUCHER', offerTitle: '2D/3D通兑电影票', price: '¥39.9', originalPrice: '¥80', description: "震撼视听，贺岁档大片热映中。" },
+  { id: '8', name: '魅KTV (工体店)', category: '娱乐', distance: '300m', imageUrl: 'https://picsum.photos/seed/ktv_neon/200/200', offerType: 'GROUP_DEAL', offerTitle: '小包欢唱3小时', price: '¥168', originalPrice: '¥388', description: "顶级音响，释放你的激情。" },
+  { id: '9', name: '喜茶 (三里屯黑金店)', category: '餐饮', distance: '400m', imageUrl: 'https://picsum.photos/seed/heytea/200/200', offerType: 'COUPON', offerTitle: '第二杯半价券', description: "酷黑莓桑新品上市。" },
+  { id: '10', name: 'Adidas 旗舰店', category: '零售', distance: '150m', imageUrl: 'https://picsum.photos/seed/adidas_shoe/200/200', offerType: 'VOUCHER', offerTitle: '800元代1000元券', price: '¥800', originalPrice: '¥1000', description: "冬季新品羽绒服热卖中。" },
 ];
 
 const CATEGORIES = ['全部', '餐饮', '娱乐', '零售', '酒吧'];
@@ -196,10 +202,6 @@ export default function App() {
 
   const handleSwitchPrize = (prizeId: string) => {
     if (prizeId !== userState.currentPrizeId) {
-      // Reset fragments if switching (Game Logic Decision: Hard Mode)
-      // Or keep them. Let's keep them for better UX, but cap at max if needed.
-      // Here we act like fragments are universal for simplicity, or we reset.
-      // Let's reset to simulate different "quest lines".
       if (confirm("切换奖品目标将重置当前碎片进度，确认切换吗？")) {
         setUserState(prev => ({
           ...prev,
@@ -213,63 +215,98 @@ export default function App() {
     }
   };
 
+  // -- Render Components --
+
+  const renderOfferBadge = (merchant: Merchant) => {
+    switch (merchant.offerType) {
+      case 'GROUP_DEAL':
+        return <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-200">超值团购</span>;
+      case 'VOUCHER':
+        return <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200">代金券</span>;
+      case 'COUPON':
+        return <span className="text-[10px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200">优惠券</span>;
+      default:
+        return null;
+    }
+  };
+
+  const renderOfferDetails = (merchant: Merchant) => {
+    if (merchant.offerType === 'COUPON') {
+      return (
+        <div className="flex items-center gap-1 mt-1">
+          <Ticket size={14} className="text-rose-500" />
+          <span className="text-sm font-bold text-rose-600">{merchant.offerTitle}</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex items-baseline gap-2 mt-1">
+        <span className="text-lg font-bold text-rose-600">{merchant.price}</span>
+        {merchant.originalPrice && (
+           <span className="text-xs text-gray-400 line-through">原价 {merchant.originalPrice}</span>
+        )}
+      </div>
+    );
+  };
+
   // -- Render Views --
 
   const renderHome = () => (
     <div className="pb-24 bg-gray-50 min-h-screen">
       {/* 1. Top Banner */}
-      <div className="w-full h-48 relative overflow-hidden">
+      <div className="w-full h-56 relative overflow-hidden">
          <img 
-            src="https://picsum.photos/seed/winter/800/400" 
+            src="https://picsum.photos/seed/winter_festival_scene/800/600" 
             className="w-full h-full object-cover" 
             alt="Event Banner" 
          />
-         <div className="absolute inset-0 bg-gradient-to-t from-gray-50 to-transparent"></div>
-         <div className="absolute top-4 right-4">
+         <div className="absolute inset-0 bg-gradient-to-t from-gray-50 via-transparent to-black/30"></div>
+         
+         {/* Enhanced Wallet Entrance */}
+         <div className="absolute top-4 right-4 z-20">
             <button 
               onClick={() => setCurrentView(AppView.WALLET)}
-              className="bg-white/80 backdrop-blur-md p-2 rounded-full shadow-lg text-gray-700 hover:text-blue-600 border border-white"
+              className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-rose-500 text-white px-4 py-2 rounded-full shadow-lg border-2 border-white/30 backdrop-blur-md active:scale-95 transition-transform"
             >
-              <Wallet size={24} />
+              <ShoppingBag size={18} fill="white" />
+              <span className="text-sm font-bold tracking-wide">我的卡包</span>
             </button>
          </div>
       </div>
 
       {/* 2. Target Prize Card (Floating up) */}
       <div className="px-5 -mt-16 relative z-10">
-        <div className="bg-white rounded-2xl shadow-xl p-4 border border-blue-50">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-white rounded-2xl shadow-xl p-5 border border-blue-50">
+          <div className="flex justify-between items-center mb-4">
              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
-               <Sparkles size={14} className="text-yellow-500" /> 当前打卡目标
+               <Sparkles size={14} className="text-yellow-500" /> 当前心愿目标
              </h2>
              <button 
                 onClick={() => setCurrentView(AppView.PRIZE_SELECTOR)}
-                className="text-xs font-semibold text-blue-600 flex items-center bg-blue-50 px-2 py-1 rounded-lg"
+                className="text-xs font-semibold text-blue-600 flex items-center bg-blue-50 px-2 py-1.5 rounded-lg active:bg-blue-100"
              >
                 <RefreshCw size={12} className="mr-1" /> 切换奖品
              </button>
           </div>
           
-          <div className="flex gap-4 items-center">
-            {/* Prize Image (Clickable) */}
+          <div className="flex gap-4 items-start">
+            {/* Prize Image */}
             <div 
-              className="w-24 h-24 rounded-xl overflow-hidden shadow-md flex-shrink-0 relative group cursor-pointer"
+              className="w-24 h-24 rounded-xl overflow-hidden shadow-md flex-shrink-0 relative group cursor-pointer bg-gray-100"
               onClick={() => setCurrentView(AppView.PRIZE_SELECTOR)}
             >
                <img src={currentPrize.imageUrl} className="w-full h-full object-cover" alt="Prize" />
-               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white text-xs font-bold">查看详情</span>
-               </div>
             </div>
 
             <div className="flex-1">
-              <h3 className="font-bold text-lg text-gray-800 leading-tight mb-1">{currentPrize.name}</h3>
-              <p className="text-xs text-gray-400 mb-3">{currentPrize.description}</p>
+              <h3 className="font-bold text-lg text-gray-900 leading-tight mb-1">{currentPrize.name}</h3>
+              <p className="text-xs text-gray-500 mb-3 line-clamp-2">{currentPrize.description}</p>
               
               {/* Fragment Progress */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-rose-500">已收集碎片</span>
+                  <span className="text-rose-500">收集进度</span>
                   <span className="text-gray-600">{userState.collectedFragments} / {currentPrize.totalFragments}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
@@ -282,39 +319,55 @@ export default function App() {
             </div>
           </div>
           
-          {userState.collectedFragments >= currentPrize.totalFragments ? (
-             <Button 
-                onClick={() => setCurrentView(AppView.MISSION_COMPLETE)}
-                fullWidth className="mt-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-orange-200"
+          {/* Action Buttons Area */}
+          <div className="mt-5 grid grid-cols-5 gap-3">
+             {/* Map Button (Small) */}
+             <button 
+                onClick={() => setCurrentView(AppView.MAP_VIEW)}
+                className="col-span-1 bg-gray-100 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-200 active:scale-95 transition-all"
+                title="查看打卡地图"
              >
-                <Gift className="mr-2" size={18} /> 任务完成！去领奖
-             </Button>
-          ) : (
-             <Button 
-                onClick={handleStartScan}
-                fullWidth className="mt-4 shadow-blue-200"
-             >
-                <Scan className="mr-2" size={18} /> 碰一下NFC收集碎片
-             </Button>
-          )}
+                <MapIcon size={24} />
+             </button>
+
+             {/* Main Action Button (Large) */}
+             <div className="col-span-4">
+               {userState.collectedFragments >= currentPrize.totalFragments ? (
+                  <Button 
+                      onClick={() => setCurrentView(AppView.MISSION_COMPLETE)}
+                      fullWidth className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-orange-200 text-sm py-0"
+                  >
+                      <Gift className="mr-2" size={18} /> 任务完成！去领奖
+                  </Button>
+               ) : (
+                  <Button 
+                      onClick={handleStartScan}
+                      fullWidth className="h-full shadow-blue-200 text-sm py-0"
+                  >
+                      <Scan className="mr-2" size={18} /> 碰一下打卡（赢礼物）
+                  </Button>
+               )}
+             </div>
+          </div>
         </div>
       </div>
 
       {/* 3. Merchant List & Search */}
       <div className="px-5 mt-8">
-         <div className="sticky top-0 bg-gray-50 z-20 pb-2">
-            <h2 className="font-bold text-lg text-gray-800 mb-3 flex items-center">
-               📍 任务地标与优惠
+         <div className="sticky top-0 bg-gray-50 z-20 pb-2 transition-all">
+            <h2 className="font-extrabold text-xl text-gray-900 mb-3 flex items-center">
+               <Flame className="text-rose-500 mr-2" fill="currentColor" size={20} />
+               活动周边优惠大放送
             </h2>
             
             {/* Search Bar */}
             <div className="relative mb-3">
                <input 
                  type="text" 
-                 placeholder="搜索商户或优惠..."
+                 placeholder="搜索商户、团购或优惠券..."
                  value={searchQuery}
                  onChange={(e) => setSearchQuery(e.target.value)}
-                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border-none shadow-sm bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border-none shadow-sm bg-white text-sm focus:ring-2 focus:ring-rose-500 outline-none placeholder-gray-400"
                />
                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
             </div>
@@ -325,10 +378,10 @@ export default function App() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     selectedCategory === cat 
-                      ? 'bg-gray-800 text-white shadow-md' 
-                      : 'bg-white text-gray-600 border border-gray-100'
+                      ? 'bg-rose-600 text-white shadow-md' 
+                      : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
                   }`}
                 >
                   {cat}
@@ -337,45 +390,50 @@ export default function App() {
             </div>
          </div>
         
-        <div className="space-y-4 mt-2">
+        <div className="space-y-4 mt-2 pb-10">
           {filteredMerchants.map((merchant) => (
-            <div key={merchant.id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex gap-3">
+            <div key={merchant.id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex gap-3 relative overflow-hidden group">
               <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
-                <img src={merchant.imageUrl} alt={merchant.name} className="w-full h-full object-cover" />
+                <img src={merchant.imageUrl} alt={merchant.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 <div className="absolute top-0 left-0 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-br-lg backdrop-blur-sm">
                   {merchant.category}
                 </div>
               </div>
+              
               <div className="flex-1 flex flex-col justify-between py-0.5">
                 <div>
-                  <h3 className="font-bold text-gray-800 text-sm line-clamp-1">{merchant.name}</h3>
-                  <p className="text-xs text-gray-400 mb-2">{merchant.distance} • {merchant.description}</p>
+                  <h3 className="font-bold text-gray-900 text-sm line-clamp-1">{merchant.name}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                     <span className="text-[10px] text-gray-400">{merchant.distance}</span>
+                     {renderOfferBadge(merchant)}
+                  </div>
+                  <p className="text-xs text-gray-500 line-clamp-1">{merchant.offerTitle}</p>
                 </div>
                 
-                {/* Offer Action Area */}
-                <div className="flex items-end justify-between">
+                {/* Enhanced Price / Action Area */}
+                <div className="flex items-end justify-between mt-1">
                    <div className="flex flex-col">
-                      <span className="text-[10px] text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded w-fit border border-rose-100 mb-1">
-                         {merchant.offerType === 'GROUP_DEAL' ? '超值团购' : merchant.offerType === 'VOUCHER' ? '代金券' : '优惠券'}
-                      </span>
-                      <div className="flex items-baseline gap-1">
-                         {merchant.price && <span className="text-lg font-bold text-rose-600">{merchant.price}</span>}
-                         {merchant.originalPrice && <span className="text-xs text-gray-400 line-through">{merchant.originalPrice}</span>}
-                         {!merchant.price && <span className="text-sm font-bold text-rose-600">免费领取</span>}
-                      </div>
+                      {renderOfferDetails(merchant)}
                    </div>
                    
                    <button className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm active:scale-95 transition-transform ${
                       merchant.offerType === 'COUPON' 
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500' 
-                      : 'bg-gradient-to-r from-rose-500 to-orange-500'
+                      ? 'bg-gradient-to-r from-rose-500 to-pink-500' 
+                      : 'bg-gradient-to-r from-orange-500 to-amber-500'
                    }`}>
-                      {merchant.offerType === 'COUPON' ? '领券' : '抢购'}
+                      {merchant.offerType === 'COUPON' ? '立即领券' : '立即抢购'}
                    </button>
                 </div>
               </div>
             </div>
           ))}
+          
+          {filteredMerchants.length > 0 && (
+             <div className="text-center py-4 text-gray-300 text-xs flex items-center justify-center">
+                <span>— 更多优惠加载中 —</span>
+             </div>
+          )}
+
           {filteredMerchants.length === 0 && (
              <div className="text-center py-10 text-gray-400 text-sm">暂无相关商户</div>
           )}
