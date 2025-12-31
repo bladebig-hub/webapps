@@ -16,7 +16,11 @@ import {
   MapPin,
   RefreshCw,
   ShoppingBag,
-  Flame
+  Flame,
+  Puzzle,
+  Store,
+  QrCode,
+  Copy
 } from 'lucide-react';
 import { AppView, Merchant, Reward, UserState, GrandPrize, WalletItem } from './types.ts';
 import { generateCheckInMessage, generateLuckyFortune, generateNextStopRecommendation } from './services/geminiService.ts';
@@ -76,7 +80,7 @@ export default function App() {
   const [geminiMessage, setGeminiMessage] = useState<string>('');
   const [geminiFortune, setGeminiFortune] = useState<string>('');
   const [nextStopGuide, setNextStopGuide] = useState<string>('');
-  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const [selectedReward, setSelectedReward] = useState<WalletItem | null>(null); // Changed to WalletItem for fuller context
 
   // User State
   const [userState, setUserState] = useState<UserState>({
@@ -123,7 +127,7 @@ export default function App() {
     
     const nextMerchant = upcomingMerchants[0];
 
-    // Simulate Network Delay
+    // Reduced delay to 700ms for snappier feel
     setTimeout(async () => {
       setIsScanning(false);
       
@@ -135,7 +139,6 @@ export default function App() {
         ...prev,
         history: [...prev.history, nextMerchant],
         collectedFragments: newFragmentCount,
-        // Add a "Pending" fragment to wallet (simulated)
       }));
 
       // Call Gemini
@@ -155,40 +158,58 @@ export default function App() {
       }
 
       setCurrentView(AppView.CHECK_IN_SUCCESS);
-    }, 1500);
+    }, 700);
   };
 
   const handleSelectReward = async (type: 'RED_PACKET' | 'COUPON') => {
-    const fortune = await generateLuckyFortune();
-    setGeminiFortune(fortune);
+    // Reduced delay for opening box
+    setTimeout(async () => {
+        const fortune = await generateLuckyFortune();
+        setGeminiFortune(fortune);
 
-    let newReward: WalletItem;
-    let rewardDetail: Reward;
+        // Pick a random merchant to make the reward concrete and real
+        const randomMerchant = MOCK_MERCHANTS[Math.floor(Math.random() * MOCK_MERCHANTS.length)];
+        
+        let newReward: WalletItem;
 
-    if (type === 'RED_PACKET') {
-      rewardDetail = { type: 'COUPON', value: '5折', title: '超值团购神券', description: '全场通用，限时五折' };
-      newReward = { id: Date.now().toString(), type: 'COUPON', title: '5折神券', value: '50% OFF', date: new Date().toLocaleDateString() };
-    } else {
-       rewardDetail = { type: 'COUPON', value: '¥50', title: '商家满减券', description: '满200元可用' };
-       newReward = { id: Date.now().toString(), type: 'COUPON', title: '¥50满减券', value: '¥50', date: new Date().toLocaleDateString() };
-    }
-    
-    // Also Add Fragment to Wallet
-    const fragmentItem: WalletItem = {
-       id: `frag-${Date.now()}`,
-       type: 'FRAGMENT',
-       title: '任务碎片',
-       description: `来自: ${userState.history[userState.history.length-1]?.name || '打卡'}`,
-       date: new Date().toLocaleDateString()
-    };
+        if (type === 'RED_PACKET') {
+          newReward = { 
+              id: Date.now().toString(), 
+              type: 'COUPON', 
+              title: randomMerchant.offerTitle, 
+              value: randomMerchant.price || '5折', 
+              date: new Date().toLocaleDateString(),
+              description: `适用商户：${randomMerchant.name}`
+          };
+        } else {
+           newReward = { 
+               id: Date.now().toString(), 
+               type: 'COUPON', 
+               title: '50元代金券', 
+               value: '¥50', 
+               date: new Date().toLocaleDateString(),
+               description: `适用商户：${randomMerchant.name} (满200可用)`
+            };
+        }
+        
+        // Also Add Fragment to Wallet
+        const currentMerchant = userState.history[userState.history.length-1];
+        const fragmentItem: WalletItem = {
+           id: `frag-${Date.now()}`,
+           type: 'FRAGMENT',
+           title: '任务碎片',
+           description: `来自: ${currentMerchant?.name || '打卡'}`,
+           date: new Date().toLocaleDateString()
+        };
 
-    setUserState(prev => ({
-      ...prev,
-      wallet: [fragmentItem, newReward, ...prev.wallet]
-    }));
+        setUserState(prev => ({
+          ...prev,
+          wallet: [fragmentItem, newReward, ...prev.wallet]
+        }));
 
-    setSelectedReward(rewardDetail);
-    setCurrentView(AppView.REWARD_CLAIMED);
+        setSelectedReward(newReward);
+        setCurrentView(AppView.REWARD_CLAIMED);
+    }, 600);
   };
 
   const handleClaimSuccess = () => {
@@ -442,6 +463,303 @@ export default function App() {
     </div>
   );
 
+  const renderSuccess = () => {
+    // Get the most recently visited merchant
+    const lastVisited = userState.history[userState.history.length - 1] || MOCK_MERCHANTS[0];
+
+    return (
+      <div className="h-screen flex flex-col bg-slate-900 relative overflow-hidden">
+        {/* Festive Background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/confetti-doodles.png')] opacity-10"></div>
+        
+        {/* Decorative Circles */}
+        <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-rose-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 w-full max-w-md mx-auto">
+          
+          {/* Brand Exposure Card */}
+          <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 mb-8 text-center shadow-2xl animate-fade-in-up">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto border-4 border-white shadow-lg -mt-16 mb-4 relative">
+              <img src={lastVisited.imageUrl} alt={lastVisited.name} className="w-full h-full object-cover" />
+            </div>
+            
+            <h2 className="text-white text-xl font-bold mb-1">打卡成功</h2>
+            <div className="flex items-center justify-center gap-1 text-blue-200 text-sm mb-4">
+              <MapPin size={14} />
+              <span>{lastVisited.name}</span>
+            </div>
+
+            {/* AI Message */}
+            <div className="bg-white/90 text-slate-800 p-4 rounded-xl text-sm font-medium italic relative shadow-inner">
+               <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45"></div>
+               "{geminiMessage || '欢迎光临！祝你在嘉年华玩得开心！'}"
+            </div>
+          </div>
+
+          {/* Concrete Fragment Visualization */}
+          <div className="relative mb-8 group perspective">
+             <div className="absolute inset-0 bg-yellow-400/50 rounded-full blur-2xl animate-pulse"></div>
+             <div className="relative w-32 h-32 bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 rounded-2xl rotate-3 shadow-[0_0_30px_rgba(251,191,36,0.6)] flex items-center justify-center border-4 border-yellow-200 transform transition-transform duration-700 hover:rotate-6 hover:scale-105">
+                <Puzzle size={64} className="text-white drop-shadow-md" />
+                <div className="absolute top-2 right-2 text-white/80">
+                   <Sparkles size={20} className="animate-spin-slow" />
+                </div>
+             </div>
+             <div className="text-center mt-6">
+                <span className="inline-block bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 px-4 py-1.5 rounded-full text-sm font-bold tracking-wider">
+                   获得 1 枚任务碎片
+                </span>
+             </div>
+          </div>
+
+          {/* Next Step AI Guide (Optional, smaller) */}
+          {nextStopGuide && (
+             <div className="mb-8 text-center text-slate-400 text-xs px-8">
+                <span className="text-blue-400 font-bold">NEXT:</span> {nextStopGuide}
+             </div>
+          )}
+
+          <Button 
+            onClick={() => setCurrentView(AppView.REWARD_SELECTION)} 
+            size="lg" 
+            fullWidth 
+            className="shadow-[0_0_20px_rgba(37,99,235,0.5)] bg-gradient-to-r from-blue-500 to-indigo-600 border-t border-blue-400"
+          >
+            <Gift className="mr-2 animate-bounce" size={20} /> 
+            开启商户盲盒礼包
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRewardSelection = () => (
+    <div className="h-screen flex flex-col bg-gradient-to-br from-indigo-900 to-slate-900 text-white px-6 py-12">
+      <h2 className="text-2xl font-bold text-center mb-2">选择你的礼物</h2>
+      <p className="text-center text-indigo-200 mb-10">点击任意礼盒，解锁即时福利！</p>
+
+      <div className="flex-1 grid grid-cols-1 gap-6 place-content-center">
+        {/* Gift Box 1 */}
+        <div 
+            onClick={() => handleSelectReward('RED_PACKET')}
+            className="group relative h-52 bg-gradient-to-br from-rose-500 to-orange-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-orange-500/50 flex flex-col items-center justify-center border-4 border-white/10 active:scale-95"
+        >
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/giftly.png')] opacity-10 rounded-2xl"></div>
+            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm shadow-inner">
+                <Gift size={40} className="text-white drop-shadow-md" />
+            </div>
+            <h3 className="text-2xl font-bold tracking-wider">惊喜盲盒 A</h3>
+            <div className="mt-2 text-xs font-medium bg-white/20 px-3 py-1 rounded-full">点击开启</div>
+        </div>
+
+        {/* Gift Box 2 */}
+        <div 
+            onClick={() => handleSelectReward('COUPON')}
+            className="group relative h-52 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-purple-500/50 flex flex-col items-center justify-center border-4 border-white/10 active:scale-95"
+        >
+             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/giftly.png')] opacity-10 rounded-2xl"></div>
+             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm shadow-inner">
+                <Sparkles size={40} className="text-white drop-shadow-md" />
+            </div>
+            <h3 className="text-2xl font-bold tracking-wider">惊喜盲盒 B</h3>
+            <div className="mt-2 text-xs font-medium bg-white/20 px-3 py-1 rounded-full">点击开启</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRewardClaimed = () => {
+    // Only render if we have a selected reward
+    if (!selectedReward) return null;
+
+    return (
+        <div className="h-screen flex flex-col bg-gray-100 px-4 py-8 overflow-y-auto">
+            <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full">
+                
+                <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                    <Sparkles className="text-yellow-500 mr-2" fill="currentColor" />
+                    恭喜获得商家福利
+                </h2>
+
+                {/* Realistic Ticket Design */}
+                <div className="w-full bg-white rounded-2xl overflow-hidden shadow-xl relative mb-8">
+                    {/* Ticket Header (Color band) */}
+                    <div className="h-3 bg-gradient-to-r from-rose-500 to-orange-500"></div>
+                    
+                    {/* Ticket Body */}
+                    <div className="p-6 pb-8">
+                        {/* Merchant Header */}
+                        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-dashed border-gray-200">
+                           <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Store size={24} className="text-gray-500" />
+                           </div>
+                           <div className="flex-1">
+                              <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Merchant</div>
+                              <div className="font-bold text-gray-800 leading-tight">{selectedReward.description?.split('：')[1] || '活动合作商户'}</div>
+                           </div>
+                        </div>
+
+                        {/* Value Area */}
+                        <div className="text-center mb-6">
+                           <div className="text-5xl font-black text-rose-600 tracking-tighter mb-1">{selectedReward.value}</div>
+                           <div className="text-lg font-bold text-gray-800">{selectedReward.title}</div>
+                           <div className="inline-block mt-2 px-3 py-1 bg-rose-50 text-rose-600 text-xs font-bold rounded-full">
+                              有效期至: 2024-02-28
+                           </div>
+                        </div>
+
+                        {/* Barcode / QR Simulation */}
+                        <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between border border-gray-100">
+                           <QrCode size={48} className="text-gray-800" />
+                           <div className="text-right">
+                              <div className="text-[10px] text-gray-400 mb-1">核销码 (点击复制)</div>
+                              <div className="text-lg font-mono font-bold text-gray-700 tracking-widest flex items-center gap-2">
+                                 BW-9527-88
+                                 <Copy size={14} className="text-gray-400" />
+                              </div>
+                           </div>
+                        </div>
+                    </div>
+
+                    {/* Sawtooth / Perforation effect at bottom */}
+                    <div className="relative h-4 bg-gray-100 -mt-2">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-[radial-gradient(circle,transparent_5px,#fff_5px)] bg-[length:16px_16px] bg-[position:-8px_-8px]"></div>
+                    </div>
+                </div>
+
+                {/* Fortune Cookie */}
+                <div className="bg-orange-50 text-orange-900/80 px-5 py-3 rounded-lg text-sm italic font-medium mb-8 border border-orange-200/50 shadow-sm max-w-xs text-center">
+                   " {geminiFortune} "
+                </div>
+
+                <Button onClick={handleClaimSuccess} fullWidth className="bg-gray-900 text-white shadow-xl">
+                    收入卡包并继续
+                </Button>
+            </div>
+        </div>
+    );
+  };
+
+  const renderWallet = () => (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+       <div className="bg-white p-4 shadow-sm flex items-center sticky top-0 z-10">
+          <button onClick={() => setCurrentView(AppView.HOME)} className="p-2 -ml-2">
+             <ArrowLeft size={24} />
+          </button>
+          <h1 className="text-lg font-bold ml-2">我的卡包与碎片</h1>
+       </div>
+
+       <div className="p-4 space-y-4">
+          <h3 className="text-sm font-bold text-gray-500 uppercase">当前任务收集</h3>
+          {/* Fragment Grid */}
+          <div className="grid grid-cols-4 gap-2 bg-white p-4 rounded-2xl border border-gray-100">
+             {Array.from({ length: currentPrize.totalFragments }).map((_, i) => (
+                <div key={i} className={`aspect-square rounded-lg flex items-center justify-center border-2 ${
+                   i < userState.collectedFragments 
+                   ? 'bg-rose-50 border-rose-200 text-rose-500' 
+                   : 'bg-gray-50 border-gray-100 text-gray-300'
+                }`}>
+                   {i < userState.collectedFragments ? <Puzzle size={24} fill="currentColor" /> : <span className="text-xs font-bold">{i+1}</span>}
+                </div>
+             ))}
+             <div className="col-span-4 mt-2 text-center text-xs text-gray-400">
+                再收集 {currentPrize.totalFragments - userState.collectedFragments} 个碎片即可兑换 <span className="text-gray-800 font-bold">{currentPrize.name}</span>
+             </div>
+          </div>
+
+          <h3 className="text-sm font-bold text-gray-500 uppercase mt-6">优惠券与奖品 ({userState.wallet.length})</h3>
+          <div className="space-y-3">
+             {userState.wallet.filter(i => i.type !== 'FRAGMENT').map(item => (
+                <div key={item.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center relative overflow-hidden">
+                   {/* Decorative circle */}
+                   <div className="absolute -right-4 -top-4 w-16 h-16 bg-gray-50 rounded-full z-0"></div>
+                   
+                   <div className="flex items-center gap-3 relative z-10">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                         item.type === 'RED_PACKET' ? 'bg-red-100 text-red-500' : 'bg-blue-100 text-blue-500'
+                      }`}>
+                         <Ticket size={18} />
+                      </div>
+                      <div>
+                         <h4 className="font-bold text-gray-800">{item.title}</h4>
+                         <p className="text-xs text-gray-500">{item.description || item.date}</p>
+                      </div>
+                   </div>
+                   <span className="text-lg font-bold text-gray-800 relative z-10">{item.value}</span>
+                </div>
+             ))}
+             {userState.wallet.filter(i => i.type !== 'FRAGMENT').length === 0 && (
+                <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-dashed">
+                   空空如也，快去打卡吧！
+                </div>
+             )}
+          </div>
+       </div>
+    </div>
+  );
+
+  const renderMissionComplete = () => (
+    <div className="h-screen flex flex-col bg-white overflow-y-auto">
+       {/* Celebration Header */}
+       <div className="bg-rose-600 text-white p-8 text-center rounded-b-[3rem] relative overflow-hidden shrink-0">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/confetti-doodles.png')] opacity-20"></div>
+          <div className="relative z-10 animate-fade-in-up">
+             <div className="w-24 h-24 bg-white rounded-full mx-auto flex items-center justify-center mb-4 shadow-lg">
+                <Gift size={48} className="text-rose-600" />
+             </div>
+             <h1 className="text-3xl font-extrabold mb-2">任务达成!</h1>
+             <p className="text-rose-100">恭喜集齐所有碎片</p>
+          </div>
+       </div>
+
+       <div className="flex-1 px-6 py-8 flex flex-col items-center">
+          <h2 className="text-gray-500 text-sm font-bold uppercase tracking-wide mb-4">你的终极大奖</h2>
+          
+          <div className="w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 mb-8 max-w-xs mx-auto">
+             <img src={currentPrize.imageUrl} className="w-full h-48 object-cover" alt="Prize" />
+             <div className="p-6 text-center">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{currentPrize.name}</h3>
+                <p className="text-gray-500 text-sm">{currentPrize.description}</p>
+                <div className="mt-4 flex justify-center">
+                   <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center">
+                      <CheckCircle2 size={12} className="mr-1" /> 资格已锁定
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          <div className="w-full max-w-sm space-y-4">
+             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <h4 className="font-bold text-gray-800 mb-3 flex items-center">
+                   <MapPin size={16} className="mr-2 text-gray-500" /> 领奖服务中心
+                </h4>
+                <div className="space-y-2 text-sm text-gray-600 pl-6 border-l-2 border-gray-200 ml-2">
+                   <p>📍 地址：朝阳区工人体育场北路58号 · 服务台</p>
+                   <p>⏰ 时间：10:00 - 22:00</p>
+                   <p className="flex items-center gap-2">
+                      <Phone size={14} /> 010-8888-8888
+                   </p>
+                </div>
+                <div className="mt-4 flex gap-2">
+                   <Button variant="outline" size="sm" fullWidth className="text-xs">
+                      <Phone size={14} className="mr-1" /> 致电客服
+                   </Button>
+                   <Button variant="primary" size="sm" fullWidth className="text-xs">
+                      <Navigation size={14} className="mr-1" /> 导航前往
+                   </Button>
+                </div>
+             </div>
+
+             <Button onClick={() => setCurrentView(AppView.HOME)} variant="ghost" fullWidth>
+                稍后领取，返回主页
+             </Button>
+          </div>
+       </div>
+    </div>
+  );
+
   const renderPrizeSelector = () => (
     <div className="min-h-screen bg-gray-100 p-5">
       <div className="flex items-center mb-6">
@@ -512,232 +830,6 @@ export default function App() {
           {isScanning ? "模拟NFC感应" : "正在识别..."}
         </Button>
       </div>
-    </div>
-  );
-
-  const renderSuccess = () => (
-    <div className="h-screen flex flex-col bg-white relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-50 to-white pointer-events-none"></div>
-      
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10">
-        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-[bounce_1s_infinite]">
-          <CheckCircle2 size={48} className="text-green-600" />
-        </div>
-        
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">打卡成功！</h2>
-        <div className="bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg text-sm font-bold border border-yellow-200 mb-4 inline-flex items-center">
-           <Sparkles size={16} className="mr-1" /> 获得 1 块任务碎片
-        </div>
-
-        {/* Gemini Generated Message */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-blue-100 max-w-sm w-full mb-6 transform transition-all duration-500 hover:scale-105 relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 text-yellow-100 opacity-50 rotate-12">
-            <Sparkles size={80} />
-          </div>
-          <p className="text-lg font-medium text-gray-800 italic font-serif relative z-10">
-            "{geminiMessage || '正在生成好运寄语...'}"
-          </p>
-        </div>
-
-        {/* Gemini Next Step Recommendation */}
-        {nextStopGuide && (
-           <div className="flex items-start gap-2 max-w-sm w-full mb-8 text-left bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-              <Navigation size={18} className="text-indigo-500 mt-1 flex-shrink-0" />
-              <div>
-                <span className="text-xs font-bold text-indigo-500 uppercase tracking-wide">AI 导游建议</span>
-                <p className="text-sm text-indigo-900 leading-tight mt-1">{nextStopGuide}</p>
-              </div>
-           </div>
-        )}
-
-        <Button onClick={() => setCurrentView(AppView.REWARD_SELECTION)} size="lg" fullWidth className="shadow-xl shadow-blue-200 bg-gradient-to-r from-blue-600 to-indigo-600">
-          <Gift className="mr-2" size={20} /> 开启商户盲盒
-        </Button>
-      </div>
-    </div>
-  );
-
-  const renderRewardSelection = () => (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-indigo-900 to-slate-900 text-white px-6 py-12">
-      <h2 className="text-2xl font-bold text-center mb-2">选择你的礼物</h2>
-      <p className="text-center text-indigo-200 mb-10">点击任意礼盒，解锁即时福利！</p>
-
-      <div className="flex-1 grid grid-cols-1 gap-6 place-content-center">
-        {/* Gift Box 1 */}
-        <div 
-            onClick={() => handleSelectReward('RED_PACKET')}
-            className="group relative h-52 bg-gradient-to-br from-rose-500 to-orange-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-orange-500/50 flex flex-col items-center justify-center border-4 border-white/10 active:scale-95"
-        >
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/giftly.png')] opacity-10 rounded-2xl"></div>
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm shadow-inner">
-                <Gift size={40} className="text-white drop-shadow-md" />
-            </div>
-            <h3 className="text-2xl font-bold tracking-wider">惊喜盲盒 A</h3>
-            <div className="mt-2 text-xs font-medium bg-white/20 px-3 py-1 rounded-full">点击开启</div>
-        </div>
-
-        {/* Gift Box 2 */}
-        <div 
-            onClick={() => handleSelectReward('COUPON')}
-            className="group relative h-52 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl p-6 shadow-2xl cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-purple-500/50 flex flex-col items-center justify-center border-4 border-white/10 active:scale-95"
-        >
-             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/giftly.png')] opacity-10 rounded-2xl"></div>
-             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform backdrop-blur-sm shadow-inner">
-                <Sparkles size={40} className="text-white drop-shadow-md" />
-            </div>
-            <h3 className="text-2xl font-bold tracking-wider">惊喜盲盒 B</h3>
-            <div className="mt-2 text-xs font-medium bg-white/20 px-3 py-1 rounded-full">点击开启</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderRewardClaimed = () => (
-    <div className="h-screen flex flex-col bg-white px-6 py-12 text-center">
-        <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="relative mb-8 animate-bounce">
-               <div className="absolute -inset-10 bg-gradient-to-r from-yellow-300 to-orange-300 rounded-full opacity-30 blur-xl"></div>
-               {selectedReward?.type === 'RED_PACKET' ? (
-                   <div className="w-48 h-32 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl border-4 border-yellow-400 flex flex-col items-center justify-center shadow-2xl relative z-10 text-white">
-                       <span className="text-4xl font-black drop-shadow-sm">{selectedReward.value}</span>
-                       <span className="text-xs font-medium bg-black/10 px-2 py-0.5 rounded mt-2">团购特惠</span>
-                   </div>
-               ) : (
-                    <div className="w-48 h-32 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl border-dashed border-2 border-white/50 flex flex-col items-center justify-center shadow-2xl relative z-10 text-white">
-                       <span className="text-4xl font-black drop-shadow-sm">{selectedReward?.value}</span>
-                       <span className="text-xs font-medium bg-black/10 px-2 py-0.5 rounded mt-2">商家满减</span>
-                   </div>
-               )}
-            </div>
-
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">{selectedReward?.title}</h2>
-            <p className="text-gray-500 mb-6 max-w-xs mx-auto">{selectedReward?.description}</p>
-            
-            <div className="bg-orange-50 text-orange-800 px-6 py-4 rounded-xl text-base italic font-medium mb-10 max-w-xs mx-auto border border-orange-200 shadow-sm">
-               " {geminiFortune} "
-            </div>
-
-            <div className="w-full space-y-3">
-                <Button onClick={handleClaimSuccess} fullWidth className="bg-gray-900 text-white">
-                    收入卡包并继续
-                </Button>
-            </div>
-        </div>
-    </div>
-  );
-
-  const renderWallet = () => (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-       <div className="bg-white p-4 shadow-sm flex items-center sticky top-0 z-10">
-          <button onClick={() => setCurrentView(AppView.HOME)} className="p-2 -ml-2">
-             <ArrowLeft size={24} />
-          </button>
-          <h1 className="text-lg font-bold ml-2">我的卡包与碎片</h1>
-       </div>
-
-       <div className="p-4 space-y-4">
-          <h3 className="text-sm font-bold text-gray-500 uppercase">当前任务收集</h3>
-          {/* Fragment Grid */}
-          <div className="grid grid-cols-4 gap-2 bg-white p-4 rounded-2xl border border-gray-100">
-             {Array.from({ length: currentPrize.totalFragments }).map((_, i) => (
-                <div key={i} className={`aspect-square rounded-lg flex items-center justify-center border-2 ${
-                   i < userState.collectedFragments 
-                   ? 'bg-rose-50 border-rose-200 text-rose-500' 
-                   : 'bg-gray-50 border-gray-100 text-gray-300'
-                }`}>
-                   {i < userState.collectedFragments ? <Sparkles size={20} /> : <span className="text-xs font-bold">{i+1}</span>}
-                </div>
-             ))}
-             <div className="col-span-4 mt-2 text-center text-xs text-gray-400">
-                再收集 {currentPrize.totalFragments - userState.collectedFragments} 个碎片即可兑换 <span className="text-gray-800 font-bold">{currentPrize.name}</span>
-             </div>
-          </div>
-
-          <h3 className="text-sm font-bold text-gray-500 uppercase mt-6">优惠券与奖品 ({userState.wallet.length})</h3>
-          <div className="space-y-3">
-             {userState.wallet.filter(i => i.type !== 'FRAGMENT').map(item => (
-                <div key={item.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
-                   <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                         item.type === 'RED_PACKET' ? 'bg-red-100 text-red-500' : 'bg-blue-100 text-blue-500'
-                      }`}>
-                         <Ticket size={18} />
-                      </div>
-                      <div>
-                         <h4 className="font-bold text-gray-800">{item.title}</h4>
-                         <p className="text-xs text-gray-500">{item.description || item.date}</p>
-                      </div>
-                   </div>
-                   <span className="text-lg font-bold text-gray-800">{item.value}</span>
-                </div>
-             ))}
-             {userState.wallet.filter(i => i.type !== 'FRAGMENT').length === 0 && (
-                <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-dashed">
-                   空空如也，快去打卡吧！
-                </div>
-             )}
-          </div>
-       </div>
-    </div>
-  );
-
-  const renderMissionComplete = () => (
-    <div className="h-screen flex flex-col bg-white overflow-y-auto">
-       {/* Celebration Header */}
-       <div className="bg-rose-600 text-white p-8 text-center rounded-b-[3rem] relative overflow-hidden shrink-0">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/confetti-doodles.png')] opacity-20"></div>
-          <div className="relative z-10 animate-fade-in-up">
-             <div className="w-24 h-24 bg-white rounded-full mx-auto flex items-center justify-center mb-4 shadow-lg">
-                <Gift size={48} className="text-rose-600" />
-             </div>
-             <h1 className="text-3xl font-extrabold mb-2">任务达成!</h1>
-             <p className="text-rose-100">恭喜集齐所有碎片</p>
-          </div>
-       </div>
-
-       <div className="flex-1 px-6 py-8 flex flex-col items-center">
-          <h2 className="text-gray-500 text-sm font-bold uppercase tracking-wide mb-4">你的终极大奖</h2>
-          
-          <div className="w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 mb-8 max-w-xs mx-auto">
-             <img src={currentPrize.imageUrl} className="w-full h-48 object-cover" alt="Prize" />
-             <div className="p-6 text-center">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{currentPrize.name}</h3>
-                <p className="text-gray-500 text-sm">{currentPrize.description}</p>
-                <div className="mt-4 flex justify-center">
-                   <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center">
-                      <CheckCircle2 size={12} className="mr-1" /> 资格已锁定
-                   </div>
-                </div>
-             </div>
-          </div>
-
-          <div className="w-full max-w-sm space-y-4">
-             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                   <MapPin size={16} className="mr-2 text-gray-500" /> 领奖服务中心
-                </h4>
-                <div className="space-y-2 text-sm text-gray-600 pl-6 border-l-2 border-gray-200 ml-2">
-                   <p>📍 地址：朝阳区工人体育场北路58号 · 服务台</p>
-                   <p>⏰ 时间：10:00 - 22:00</p>
-                   <p className="flex items-center gap-2">
-                      <Phone size={14} /> 010-8888-8888
-                   </p>
-                </div>
-                <div className="mt-4 flex gap-2">
-                   <Button variant="outline" size="sm" fullWidth className="text-xs">
-                      <Phone size={14} className="mr-1" /> 致电客服
-                   </Button>
-                   <Button variant="primary" size="sm" fullWidth className="text-xs">
-                      <Navigation size={14} className="mr-1" /> 导航前往
-                   </Button>
-                </div>
-             </div>
-
-             <Button onClick={() => setCurrentView(AppView.HOME)} variant="ghost" fullWidth>
-                稍后领取，返回主页
-             </Button>
-          </div>
-       </div>
     </div>
   );
 
