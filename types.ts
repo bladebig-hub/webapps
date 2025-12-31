@@ -54,4 +54,5 @@ export interface UserState {
   collectedFragments: number; // Count for current prize
   history: Merchant[];
   wallet: WalletItem[];
+  wishingCards: number; // New: Number of wishing cards collected
 }

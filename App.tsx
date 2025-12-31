@@ -21,7 +21,10 @@ import {
   Store,
   QrCode,
   Copy,
-  Clock
+  Clock,
+  Share2,
+  Crown,
+  CreditCard
 } from 'lucide-react';
 import { AppView, Merchant, Reward, UserState, GrandPrize, WalletItem } from './types.ts';
 import { generateCheckInMessage, generateLuckyFortune, generateNextStopRecommendation } from './services/geminiService.ts';
@@ -99,7 +102,8 @@ export default function App() {
     history: [],
     wallet: [
       { id: 'w1', type: 'FRAGMENT', title: '初始碎片', date: '2023-12-01', description: '新手大礼包赠送' }
-    ]
+    ],
+    wishingCards: 2 // Initial wishing cards
   });
 
   // --- Effects ---
@@ -137,6 +141,11 @@ export default function App() {
     setCurrentView(AppView.NFC_SCANNING);
     setGeminiMessage('');
     setIsScanning(true);
+  };
+
+  const handleShare = () => {
+    // Simulate share
+    alert("已调起微信分享，快去邀请好友吧！");
   };
 
   const handleSimulateNFC = async () => {
@@ -178,6 +187,7 @@ export default function App() {
       ...prev,
       history: [...prev.history, nextMerchant],
       collectedFragments: newFragmentCount,
+      wishingCards: prev.wishingCards + 2 // Grant 2 Wishing Cards
     }));
 
     setCurrentView(AppView.CHECK_IN_SUCCESS);
@@ -303,7 +313,7 @@ export default function App() {
   // -- Render Views --
 
   const renderHome = () => (
-    <div className="pb-24 bg-gray-50 min-h-screen">
+    <div className="pb-24 bg-gray-50 min-h-screen relative">
       {/* 1. Top Banner - Carousel - Reduced Height */}
       <div className="w-full h-40 relative overflow-hidden">
          {BANNER_IMAGES.map((img, idx) => (
@@ -327,19 +337,19 @@ export default function App() {
             ))}
          </div>
 
-         {/* Enhanced Wallet Entrance */}
+         {/* Share Button (Top Right) */}
          <div className="absolute top-4 right-4 z-20">
             <button 
-              onClick={() => setCurrentView(AppView.WALLET)}
-              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-full shadow-lg border border-white/30 backdrop-blur-md active:scale-95 transition-transform"
+              onClick={handleShare}
+              className="flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-full shadow-lg border border-white/30 backdrop-blur-md active:scale-95 transition-transform"
             >
-              <ShoppingBag size={16} fill="white" />
-              <span className="text-xs font-bold tracking-wide">我的卡包</span>
+              <Share2 size={16} fill="white" />
+              <span className="text-xs font-bold tracking-wide">分享</span>
             </button>
          </div>
       </div>
 
-      {/* 2. Target Prize Card (Floating up less due to smaller banner) */}
+      {/* 2. Target Prize Card */}
       <div className="px-5 -mt-6 relative z-10">
         <div className="bg-white rounded-2xl shadow-xl p-5 border border-blue-50">
           <div className="flex justify-between items-center mb-4">
@@ -416,8 +426,31 @@ export default function App() {
         </div>
       </div>
 
+      {/* 2.5 New: 0 Yuan Wish Banner */}
+      <div className="px-5 mt-4">
+         <div className="w-full bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 rounded-xl p-3 shadow-lg flex items-center justify-between cursor-pointer transform transition-transform hover:scale-[1.01] active:scale-95 relative overflow-hidden group">
+            {/* Background effects */}
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
+            <div className="absolute -right-4 -top-8 w-24 h-24 bg-white/20 blur-2xl rounded-full"></div>
+            
+            <div className="flex items-center gap-3 relative z-10 text-white">
+               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm shadow-inner">
+                  <Crown size={20} className="text-yellow-300 drop-shadow-sm" fill="currentColor" />
+               </div>
+               <div>
+                  <h3 className="font-bold text-base leading-tight">0元许愿赢免单</h3>
+                  <p className="text-[10px] text-purple-100 opacity-90">锦鲤附体 · 每日抽取幸运大奖</p>
+               </div>
+            </div>
+            
+            <div className="bg-white text-purple-600 text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center relative z-10">
+               去许愿 <ChevronRight size={12} className="ml-0.5" />
+            </div>
+         </div>
+      </div>
+
       {/* 3. Merchant List & Search - Removed Search Input */}
-      <div className="px-5 mt-8">
+      <div className="px-5 mt-6">
          <div className="sticky top-0 bg-gray-50 z-20 pb-2 transition-all pt-2">
             <h2 className="font-extrabold text-xl text-gray-900 mb-4 flex items-center">
                <Flame className="text-rose-500 mr-2" fill="currentColor" size={20} />
@@ -491,6 +524,22 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* Floating Wallet Button (Bottom Right) */}
+      <div className="fixed bottom-8 right-4 z-40">
+         <button 
+           onClick={() => setCurrentView(AppView.WALLET)}
+           className="bg-white text-gray-800 rounded-full shadow-2xl border-2 border-gray-100 p-1 pr-4 flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
+         >
+            <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-orange-500 rounded-full flex items-center justify-center text-white shadow-md">
+               <Wallet size={20} />
+            </div>
+            <div className="flex flex-col items-start">
+               <span className="text-xs font-bold">我的卡包</span>
+               <span className="text-[10px] text-rose-500 font-bold">{userState.wallet.length + userState.wishingCards} 件物品</span>
+            </div>
+         </button>
+      </div>
     </div>
   );
 
@@ -511,7 +560,7 @@ export default function App() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 w-full max-w-md mx-auto">
           
           {/* Brand Exposure Card */}
-          <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 mb-8 text-center shadow-2xl animate-fade-in-up">
+          <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 mb-6 text-center shadow-2xl animate-fade-in-up">
             
             {/* Merchant Image */}
             <div className="w-full h-32 rounded-xl overflow-hidden mb-4 shadow-inner relative">
@@ -537,19 +586,37 @@ export default function App() {
             </div>
           </div>
 
-          {/* Concrete Fragment Visualization */}
-          <div className="relative mb-8 group perspective">
-             <div className="absolute inset-0 bg-yellow-400/50 rounded-full blur-2xl animate-pulse"></div>
-             <div className="relative w-32 h-32 bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 rounded-2xl rotate-3 shadow-[0_0_30px_rgba(251,191,36,0.6)] flex items-center justify-center border-4 border-yellow-200 transform transition-transform duration-700 hover:rotate-6 hover:scale-105">
-                <Puzzle size={64} className="text-white drop-shadow-md" />
-                <div className="absolute top-2 right-2 text-white/80">
-                   <Sparkles size={20} className="animate-spin-slow" />
+          {/* Rewards Section */}
+          <div className="w-full grid grid-cols-2 gap-3 mb-6">
+             {/* Fragment Item */}
+             <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-xl p-3 flex flex-col items-center justify-center relative backdrop-blur-sm animate-pulse">
+                <div className="absolute top-1 right-1">
+                   <CheckCircle2 size={12} className="text-green-400" />
                 </div>
+                <Puzzle size={32} className="text-yellow-300 drop-shadow-md mb-1" />
+                <span className="text-white text-xs font-bold">任务碎片 x1</span>
              </div>
-             <div className="text-center mt-6">
-                <span className="inline-block bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 px-4 py-1.5 rounded-full text-sm font-bold tracking-wider">
-                   获得 1 枚任务碎片
-                </span>
+
+             {/* Red Packet Item (New) */}
+             <div className="bg-red-500/20 border border-red-500/40 rounded-xl p-3 flex flex-col items-center justify-center relative backdrop-blur-sm animate-pulse delay-100">
+                <div className="absolute top-1 right-1">
+                   <Sparkles size={12} className="text-yellow-400 animate-spin-slow" />
+                </div>
+                <div className="relative">
+                   <div className="w-8 h-10 bg-red-600 rounded mb-1 flex items-center justify-center border border-red-400 shadow-md">
+                      <span className="text-yellow-300 font-bold text-xs">¥</span>
+                   </div>
+                </div>
+                <span className="text-white text-xs font-bold">店铺红包 x1</span>
+             </div>
+          </div>
+
+          {/* Wishing Cards Bonus */}
+          <div className="mb-8 w-full">
+             <div className="bg-gradient-to-r from-purple-600/60 to-indigo-600/60 border border-purple-400/30 rounded-xl p-3 flex items-center justify-center gap-3 shadow-lg">
+                <Crown size={20} className="text-yellow-300" />
+                <span className="text-white font-bold text-sm">额外获赠：许愿卡 x2</span>
+                <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full">已存入</span>
              </div>
           </div>
 
@@ -697,6 +764,19 @@ export default function App() {
        </div>
 
        <div className="p-4 space-y-4">
+          <div className="bg-gradient-to-r from-violet-600 to-purple-600 rounded-xl p-4 text-white shadow-lg flex items-center justify-between">
+             <div className="flex items-center gap-3">
+                <Crown className="text-yellow-300" />
+                <div>
+                   <div className="text-xs text-purple-200">我的许愿卡</div>
+                   <div className="text-2xl font-bold">{userState.wishingCards} <span className="text-sm font-normal">张</span></div>
+                </div>
+             </div>
+             <Button size="sm" className="bg-white/20 border-0 text-white hover:bg-white/30 text-xs">
+                去许愿
+             </Button>
+          </div>
+
           <h3 className="text-sm font-bold text-gray-500 uppercase">当前任务收集</h3>
           {/* Fragment Grid */}
           <div className="grid grid-cols-4 gap-2 bg-white p-4 rounded-2xl border border-gray-100">
